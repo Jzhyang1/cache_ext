@@ -69,8 +69,22 @@ class CacheExtPolicy:
     def stop(self):
         if not self.has_started:
             raise Exception("Policy not started")
-        cmd = ["sudo", "kill", "-2", str(self._policy_thread.pid)]
-        run(cmd)
+        try:
+            run(["sudo", "kill", "-2", str(self._policy_thread.pid)])
+        except Exception as e:
+            # name of the error file is cgroup + loader
+            cgroup = os.path.splitext(os.path.basename(self.cgroup_path))[0]
+            loader = os.path.splitext(os.path.basename(self.loader_path))[0]
+            error_file = f"/data/err_{cgroup}_{loader}.log"
+            log.error("Failed to stop policy thread, saving error log to %s", error_file)
+            # log the last part of the error message
+            error_message = str(e)[-500:]
+            # clean the error message
+            error_message = error_message.replace("'", '"')
+            run(["sudo", "sh", "-c", f"echo '{error_message}' >> {error_file}"])
+            # log the dmesg output
+            run(["sudo", "sh", "-c", f"dmesg >> {error_file}"])
+
         out, err = self._policy_thread.communicate()
         with suppress(subprocess.CalledProcessError):
             run(["sudo", "rm", "/sys/fs/bpf/cache_ext/scan_pids"])
@@ -345,7 +359,7 @@ class BenchRun:
         return self.__dict__
 
 
-def parse_results_file(results_file: str, benchresults_cls) -> BenchRun:
+def parse_results_file(results_file: str, benchresults_cls) -> List[BenchRun]:
     with open(results_file, "r") as f:
         results = json.load(f)
     return [
