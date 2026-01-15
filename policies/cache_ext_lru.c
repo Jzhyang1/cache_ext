@@ -178,6 +178,7 @@ int main(int argc, char **argv) {
 	ret = 0;
 
 cleanup:
+	print_lru_stats(skel);
 	close(cgroup_fd);
 	bpf_link__destroy(link);
 	cache_ext_lru_bpf__destroy(skel);
