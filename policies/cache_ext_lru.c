@@ -8,6 +8,7 @@
 #include <sys/stat.h>
 #include <sys/types.h>
 #include <unistd.h>
+#include <stdint.h>
 
 #include "dir_watcher.h"
 #include "cache_ext_lru.skel.h"
@@ -91,8 +92,8 @@ static int validate_watch_dir(const char *watch_dir, char *watch_dir_full_path) 
 }
 
 static void print_lru_stats(struct cache_ext_lru_bpf *skel) {
-    u32 key;
-    u64 value;
+    uint32_t key;
+    uint64_t value;
 
     key = 0; // hits
     if (bpf_map_lookup_elem(bpf_map__fd(skel->maps.lru_stats), &key, &value) == 0)
