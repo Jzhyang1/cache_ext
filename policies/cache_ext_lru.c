@@ -11,7 +11,11 @@
 #include <stdint.h>
 
 #include "dir_watcher.h"
+
+typedef uint64_t u64;
+typedef uint32_t u32;
 #include "cache_ext_lru.skel.h"
+
 
 char *USAGE = "Usage: ./cache_ext_lru --watch_dir <dir> --cgroup_path <path>\n";
 struct cmdline_args {
@@ -97,11 +101,11 @@ static void print_lru_stats(struct cache_ext_lru_bpf *skel) {
 
     key = 0; // hits
     if (bpf_map_lookup_elem(bpf_map__fd(skel->maps.lru_stats), &key, &value) == 0)
-        printf("Hits: %llu\n", value);
+        printf("Hits: %lu\n", value);
 
     key = 1; // misses
     if (bpf_map_lookup_elem(bpf_map__fd(skel->maps.lru_stats), &key, &value) == 0)
-        printf("Misses: %llu\n", value);
+        printf("Misses: %lu\n", value);
 }
 
 int main(int argc, char **argv) {

@@ -8,8 +8,8 @@
 
 char _license[] SEC("license") = "GPL";
 
-static u64 hits = 0;
-static u64 misses = 0;
+static volatile u64 hits = 0;
+static volatile u64 misses = 0;
 
 // Map to access stats in user space
 #define HITS_INDEX 0
