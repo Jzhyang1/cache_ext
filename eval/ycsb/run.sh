@@ -25,6 +25,7 @@ POLICIES=(
 	"cache_ext_fifo"
 	"cache_ext_mru"
 	"cache_ext_mglru"
+	"cache_ext_lru"
 )
 
 mkdir -p "$RESULTS_PATH"
