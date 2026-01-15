@@ -19,7 +19,7 @@ struct {
     __uint(max_entries, 2);
     __type(key, u32);
     __type(value, u64);
-} lru_stats SEC(".bss");
+} lru_stats SEC(".maps");
 
 s32 BPF_STRUCT_OPS_SLEEPABLE(lru_init, struct mem_cgroup *memcg) {
 	hits = 0;
