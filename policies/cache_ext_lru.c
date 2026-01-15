@@ -99,13 +99,18 @@ static void print_lru_stats(struct cache_ext_lru_bpf *skel) {
     uint32_t key;
     uint64_t value;
 
+	// we write to a file because printing gets messed up sometimes
+	FILE *fp = fopen("lru_stats.txt", "w");
+
     key = 0; // hits
     if (bpf_map_lookup_elem(bpf_map__fd(skel->maps.lru_stats), &key, &value) == 0)
-        printf("Hits: %lu\n", value);
+        fprintf(fp, "Hits: %lu\n", value);
 
     key = 1; // misses
     if (bpf_map_lookup_elem(bpf_map__fd(skel->maps.lru_stats), &key, &value) == 0)
-        printf("Misses: %lu\n", value);
+        fprintf(fp, "Misses: %lu\n", value);
+
+    fclose(fp);
 }
 
 int main(int argc, char **argv) {
