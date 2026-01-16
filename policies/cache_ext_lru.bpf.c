@@ -34,6 +34,8 @@ void BPF_STRUCT_OPS(lru_evict_folios, struct cache_ext_eviction_ctx *eviction_ct
 	u32 misses_index = MISSES_INDEX;
 	bpf_map_update_elem(&lru_stats, &hits_index, &hits, BPF_ANY);
 	bpf_map_update_elem(&lru_stats, &misses_index, &misses, BPF_ANY);
+
+	bpf_printk("LRU Eviction triggered: hits=%llu, misses=%llu\n", hits, misses);
 }
 
 void BPF_STRUCT_OPS(lru_folio_accessed, struct folio *folio) {
