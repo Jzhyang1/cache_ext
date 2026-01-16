@@ -20,15 +20,6 @@ ITERATIONS=3
 
 mkdir -p "$RESULTS_PATH"
 
-# Build correct My-YCSB version (leveldb-scan branch)
-# This branch includes SCAN changes to enable the GET-SCAN benchmark.
-cd "$YCSB_PATH/build"
-git checkout leveldb-scan
-make clean
-make -j run_leveldb
-
-cd -
-
 # Disable MGLRU
 if ! "$BASE_DIR/utils/disable-mglru.sh"; then
 	echo "Failed to disable MGLRU. Please check the script."
