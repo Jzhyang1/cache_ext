@@ -16,7 +16,7 @@ SCANUTIL_PATH="$BASE_DIR/ScanUtil"
 FILES_PATH=$(realpath "$BASE_DIR/../linux")
 RESULTS_PATH="$BASE_DIR/results"
 
-ITERATIONS=3
+ITERATIONS=1
 
 mkdir -p "$RESULTS_PATH"
 

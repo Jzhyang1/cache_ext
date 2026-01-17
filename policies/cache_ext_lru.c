@@ -2,18 +2,15 @@
 #include <bpf/bpf.h>
 #include <fcntl.h>
 #include <limits.h>
+#include <signal.h>
 #include <stdint.h>
 #include <stdio.h>
-#include <signal.h>
+#include <string.h>
 #include <sys/stat.h>
 #include <sys/types.h>
 #include <unistd.h>
-#include <stdint.h>
 
 #include "dir_watcher.h"
-
-typedef uint64_t u64;
-typedef uint32_t u32;
 #include "cache_ext_lru.skel.h"
 
 
@@ -100,7 +97,7 @@ static void print_lru_stats(struct cache_ext_lru_bpf *skel) {
     uint64_t value;
 
 	// we write to a file because printing gets messed up sometimes
-	FILE *fp = fopen("lru_stats.txt", "w");
+	FILE *fp = fopen("lru_stats.txt", "a");
 
     key = 0; // hits
     if (bpf_map_lookup_elem(bpf_map__fd(skel->maps.lru_stats), &key, &value) == 0)
