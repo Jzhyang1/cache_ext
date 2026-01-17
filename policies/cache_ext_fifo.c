@@ -11,6 +11,7 @@
 
 #include "dir_watcher.h"
 #include "cache_ext_fifo.skel.h"
+#include "cache_ext_log_util.h"
 
 char *USAGE = "Usage: ./cache_ext_fifo --watch_dir <dir> --cgroup_path <path>\n";
 struct cmdline_args {

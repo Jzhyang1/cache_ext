@@ -9,6 +9,7 @@
 
 #include "cache_ext_mglru.skel.h"
 #include "dir_watcher.h"
+#include "cache_ext_log_util.h"
 
 char *USAGE = "Usage: ./cache_ext_mglru --watch_dir <dir> --cgroup_path <path>\n";
 struct cmdline_args {

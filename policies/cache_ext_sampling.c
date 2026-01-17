@@ -12,6 +12,7 @@
 
 #include "cache_ext_sampling.skel.h"
 #include "dir_watcher.h"
+#include "cache_ext_log_util.h"
 
 char *USAGE = "Usage: ./cache_ext_sampling --watch_dir <dir> --cgroup_path <path>\n";
 struct cmdline_args {
