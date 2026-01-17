@@ -38,7 +38,7 @@ struct {
 struct {
 	__uint(type, BPF_MAP_TYPE_LRU_HASH);
 	__type(key, struct ghost_entry);
-	__type(value, u64);
+	__type(value, u8);
 	//__uint(max_entries, CACHE_SIZE); // TODO: change
 	__uint(map_flags, BPF_F_NO_COMMON_LRU);  // Per-CPU LRU eviction logic
 } ghost_map SEC(".maps");
