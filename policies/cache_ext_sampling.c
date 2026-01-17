@@ -137,6 +137,7 @@ int main(int argc, char **argv)
 	getchar();
 
 cleanup:
+	print_cache_stats(skel);
 	close(cgroup_fd);
 	bpf_link__destroy(link);
 	cache_ext_sampling_bpf__destroy(skel);

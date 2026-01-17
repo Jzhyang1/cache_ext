@@ -110,6 +110,7 @@ inline bool is_folio_relevant(struct folio *folio)
 // SEC("struct_ops.s/sampling_init")
 s32 BPF_STRUCT_OPS_SLEEPABLE(sampling_init, struct mem_cgroup *memcg)
 {
+	reset_counters();
 	dbg_printk("cache_ext: Hi from the sampling_init hook! :D\n");
 	sampling_list = bpf_cache_ext_ds_registry_new_list(memcg);
 	if (sampling_list == 0) {
@@ -123,6 +124,7 @@ s32 BPF_STRUCT_OPS_SLEEPABLE(sampling_init, struct mem_cgroup *memcg)
 
 void BPF_STRUCT_OPS(sampling_folio_added, struct folio *folio)
 {
+	increment_miss_counter();
 	dbg_printk(
 		"cache_ext: Hi from the sampling_folio_added hook! :D\n");
 	if (!is_folio_relevant(folio)) {
@@ -147,6 +149,7 @@ void BPF_STRUCT_OPS(sampling_folio_added, struct folio *folio)
 
 void BPF_STRUCT_OPS(sampling_folio_accessed, struct folio *folio)
 {
+	increment_access_counter();
 	if (!is_folio_relevant(folio)) {
 		return;
 	}
@@ -175,6 +178,7 @@ void BPF_STRUCT_OPS(sampling_folio_accessed, struct folio *folio)
 
 void BPF_STRUCT_OPS(sampling_folio_evicted, struct folio *folio)
 {
+	increment_evict_counter();
 	dbg_printk(
 		"cache_ext: Hi from the sampling_folio_evicted hook! :D\n");
 	// if (bpf_cache_ext_list_del(folio)) {
@@ -244,6 +248,8 @@ void BPF_STRUCT_OPS(sampling_evict_folios,
 		    struct cache_ext_eviction_ctx *eviction_ctx,
 		    struct mem_cgroup *memcg)
 {
+	// only sync the local variables with map on eviction
+	save_cache_stats();
 	dbg_printk(
 		"cache_ext: Hi from the sampling_evict_folios hook! :D\n");
 

@@ -204,6 +204,7 @@ int main(int argc, char **argv) {
 	printf("Number of reconfigurations: %ld\n", num_reconfigurations);
 
 cleanup:
+	print_cache_stats(skel);
 	close(cgroup_fd);
 	ring_buffer__free(events);
 	bpf_link__destroy(link);

@@ -19,6 +19,7 @@ static inline bool is_folio_relevant(struct folio *folio) {
 
 s32 BPF_STRUCT_OPS_SLEEPABLE(fifo_init, struct mem_cgroup *memcg)
 {
+	reset_counters();
 	main_list = bpf_cache_ext_ds_registry_new_list(memcg);
 	if (main_list == 0) {
 		bpf_printk("cache_ext: init: Failed to create main_list\n");
@@ -40,9 +41,16 @@ static int bpf_fifo_evict_cb(int idx, struct cache_ext_list_node *a)
 	return CACHE_EXT_EVICT_NODE;
 }
 
+void BPF_STRUCT_OPS(fifo_folio_accessed, struct folio *folio) {
+	increment_access_counter();
+}
+
 void BPF_STRUCT_OPS(fifo_evict_folios, struct cache_ext_eviction_ctx *eviction_ctx,
 		    struct mem_cgroup *memcg)
 {
+	// only sync the local variables with map on eviction
+	save_cache_stats();
+
 	if (bpf_cache_ext_list_iterate(memcg, main_list, bpf_fifo_evict_cb, eviction_ctx) < 0) {
 		bpf_printk("cache_ext: evict: Failed to iterate main_list\n");
 		return;
@@ -50,6 +58,7 @@ void BPF_STRUCT_OPS(fifo_evict_folios, struct cache_ext_eviction_ctx *eviction_c
 }
 
 void BPF_STRUCT_OPS(fifo_folio_evicted, struct folio *folio) {
+	increment_evict_counter();
 	// if (bpf_cache_ext_list_del(folio)) {
 	// 	bpf_printk("cache_ext: Failed to delete folio from list\n");
 	// 	return;
@@ -57,6 +66,7 @@ void BPF_STRUCT_OPS(fifo_folio_evicted, struct folio *folio) {
 }
 
 void BPF_STRUCT_OPS(fifo_folio_added, struct folio *folio) {
+	increment_miss_counter();
 	if (!is_folio_relevant(folio))
 		return;
 
@@ -70,6 +80,7 @@ SEC(".struct_ops.link")
 struct cache_ext_ops fifo_ops = {
 	.init = (void *)fifo_init,
 	.evict_folios = (void *)fifo_evict_folios,
+	.folio_accessed = (void *)fifo_folio_accessed,
 	.folio_evicted = (void *)fifo_folio_evicted,
 	.folio_added = (void *)fifo_folio_added,
 };

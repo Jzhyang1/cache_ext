@@ -154,6 +154,7 @@ inline bool is_folio_relevant(struct folio *folio)
 // SEC("struct_ops.s/mixed_init")
 s32 BPF_STRUCT_OPS_SLEEPABLE(mixed_init, struct mem_cgroup *memcg)
 {
+	reset_counters();
 	int ret;
 	dbg_printk("cache_ext: Hi from the mixed_init hook! :D\n");
 	for (enum ListType list_type = 0; list_type < NUM_LISTS; list_type++) {
@@ -179,6 +180,7 @@ s32 BPF_STRUCT_OPS_SLEEPABLE(mixed_init, struct mem_cgroup *memcg)
 
 void BPF_STRUCT_OPS(mixed_folio_added, struct folio *folio)
 {
+	increment_miss_counter();
 	dbg_printk(
 		"cache_ext: Hi from the mixed_folio_added hook! :D\n");
 	if (!is_folio_relevant(folio)) {
@@ -224,6 +226,7 @@ void BPF_STRUCT_OPS(mixed_folio_added, struct folio *folio)
 
 void BPF_STRUCT_OPS(mixed_folio_accessed, struct folio *folio)
 {
+	increment_access_counter();
 	if (!is_folio_relevant(folio)) {
 		return;
 	}
@@ -276,6 +279,7 @@ void BPF_STRUCT_OPS(mixed_folio_accessed, struct folio *folio)
 
 void BPF_STRUCT_OPS(mixed_folio_evicted, struct folio *folio)
 {
+	increment_evict_counter();
 	dbg_printk(
 		"cache_ext: Hi from the mixed_folio_evicted hook! :D\n");
 	int ret = bpf_cache_ext_list_del(folio);
@@ -353,6 +357,7 @@ void BPF_STRUCT_OPS(mixed_evict_folios,
 		    struct cache_ext_eviction_ctx *eviction_ctx,
 		    struct mem_cgroup *memcg)
 {
+	save_cache_stats();
 	int sampling_rate = 5;
 	dbg_printk(
 		"cache_ext: Hi from the mixed_evict_folios hook! :D\n");

@@ -693,6 +693,7 @@ inline bool is_folio_relevant(struct folio *folio)
 
 s32 BPF_STRUCT_OPS_SLEEPABLE(mglru_init, struct mem_cgroup *memcg)
 {
+	reset_counters();
 	DEFINE_LRUGEN_int;
 	WRITE_ONCE(lrugen->max_seq, MIN_NR_GENS + 1);
 	for (int i = 0; i < MAX_NR_GENS; i++) {
@@ -780,6 +781,8 @@ static int mglru_iter_fn(int idx, struct cache_ext_list_node *a)
 void BPF_STRUCT_OPS(mglru_evict_folios, struct cache_ext_eviction_ctx *eviction_ctx,
 		    struct mem_cgroup *memcg)
 {
+	// only sync the local variables with map on eviction
+	save_cache_stats();
 	DEFINE_LRUGEN_void;
 
 	bool inc_max_seq_failed = false;
@@ -871,6 +874,7 @@ void BPF_STRUCT_OPS(mglru_evict_folios, struct cache_ext_eviction_ctx *eviction_
 
 void BPF_STRUCT_OPS(mglru_folio_added, struct folio *folio)
 {
+	increment_miss_counter();
 	if (!is_folio_relevant(folio)) {
 		return;
 	}
@@ -879,6 +883,7 @@ void BPF_STRUCT_OPS(mglru_folio_added, struct folio *folio)
 
 void BPF_STRUCT_OPS(mglru_folio_accessed, struct folio *folio)
 {
+	increment_access_counter();
 	if (!is_folio_relevant(folio)) {
 		return;
 	}
@@ -887,6 +892,7 @@ void BPF_STRUCT_OPS(mglru_folio_accessed, struct folio *folio)
 
 void BPF_STRUCT_OPS(mglru_folio_evicted, struct folio *folio)
 {
+	increment_evict_counter();
 	if (!is_folio_relevant(folio)) {
 		return;
 	}

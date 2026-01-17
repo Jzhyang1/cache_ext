@@ -38,6 +38,7 @@ __u64 mru_list;
 
 s32 BPF_STRUCT_OPS_SLEEPABLE(mru_init, struct mem_cgroup *memcg)
 {
+	reset_counters();
 	dbg_printk("cache_ext: Hi from the mru_init hook! :D\n");
 	mru_list = bpf_cache_ext_ds_registry_new_list(memcg);
 	if (mru_list == 0) {
@@ -50,6 +51,7 @@ s32 BPF_STRUCT_OPS_SLEEPABLE(mru_init, struct mem_cgroup *memcg)
 
 void BPF_STRUCT_OPS(mru_folio_added, struct folio *folio)
 {
+	increment_miss_counter();
 	dbg_printk("cache_ext: Hi from the mru_folio_added hook! :D\n");
 	if (!is_folio_relevant(folio)) {
 		return;
@@ -65,6 +67,7 @@ void BPF_STRUCT_OPS(mru_folio_added, struct folio *folio)
 
 void BPF_STRUCT_OPS(mru_folio_accessed, struct folio *folio)
 {
+	increment_access_counter();
 	int ret;
 	dbg_printk("cache_ext: Hi from the mru_folio_accessed hook! :D\n");
 
@@ -83,6 +86,7 @@ void BPF_STRUCT_OPS(mru_folio_accessed, struct folio *folio)
 
 void BPF_STRUCT_OPS(mru_folio_evicted, struct folio *folio)
 {
+	increment_evict_counter();
 	dbg_printk("cache_ext: Hi from the mru_folio_evicted hook! :D\n");
 	bpf_cache_ext_list_del(folio);
 }
@@ -98,6 +102,8 @@ static int iterate_mru(int idx, struct cache_ext_list_node *node)
 void BPF_STRUCT_OPS(mru_evict_folios, struct cache_ext_eviction_ctx *eviction_ctx,
 	       struct mem_cgroup *memcg)
 {
+	// only sync the local variables with map on eviction
+	save_cache_stats();
 	dbg_printk("cache_ext: Hi from the mru_evict_folios hook! :D\n");
 	int ret = bpf_cache_ext_list_iterate(memcg, mru_list, iterate_mru,
 					     eviction_ctx);

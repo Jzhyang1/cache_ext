@@ -12,6 +12,7 @@
 
 #include "dir_watcher.h"
 #include "cache_ext_lru.skel.h"
+#include "cache_ext_log_util.h"
 
 
 char *USAGE = "Usage: ./cache_ext_lru --watch_dir <dir> --cgroup_path <path>\n";
@@ -92,24 +93,6 @@ static int validate_watch_dir(const char *watch_dir, char *watch_dir_full_path) 
 	return 0;
 }
 
-static void print_lru_stats(struct cache_ext_lru_bpf *skel) {
-    uint32_t key;
-    uint64_t value;
-
-	// we write to a file because printing gets messed up sometimes
-	FILE *fp = fopen("lru_stats.txt", "a");
-
-    key = 0; // hits
-    if (bpf_map_lookup_elem(bpf_map__fd(skel->maps.lru_stats), &key, &value) == 0)
-        fprintf(fp, "Hits: %lu\n", value);
-
-    key = 1; // misses
-    if (bpf_map_lookup_elem(bpf_map__fd(skel->maps.lru_stats), &key, &value) == 0)
-        fprintf(fp, "Misses: %lu\n", value);
-
-    fclose(fp);
-}
-
 int main(int argc, char **argv) {
 	struct cmdline_args args = { 0 };
 	struct cache_ext_lru_bpf *skel = NULL;
@@ -180,7 +163,7 @@ int main(int argc, char **argv) {
 	ret = 0;
 
 cleanup:
-	print_lru_stats(skel);
+	print_cache_stats(skel);
 	close(cgroup_fd);
 	bpf_link__destroy(link);
 	cache_ext_lru_bpf__destroy(skel);

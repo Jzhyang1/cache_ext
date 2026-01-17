@@ -141,6 +141,7 @@ cleanup_unpin:
 		perror("Failed to unpin scan_pids map");
 
 cleanup:
+	print_cache_stats(skel);
 	close(cgroup_fd);
 	bpf_link__destroy(link);
 	cache_ext_get_scan_bpf__destroy(skel);

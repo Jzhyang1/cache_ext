@@ -8,46 +8,29 @@
 
 char _license[] SEC("license") = "GPL";
 
-static volatile u64 hits = 0;
-static volatile u64 misses = 0;
-
-// Map to access stats in user space
-#define HITS_INDEX 0
-#define MISSES_INDEX 1
-struct {
-    __uint(type, BPF_MAP_TYPE_ARRAY);
-    __uint(max_entries, 2);
-    __type(key, u32);
-    __type(value, u64);
-} lru_stats SEC(".maps");
 
 s32 BPF_STRUCT_OPS_SLEEPABLE(lru_init, struct mem_cgroup *memcg) {
-	hits = 0;
-	misses = 0;
+	reset_counters();
 	return 0;
 }
 
 void BPF_STRUCT_OPS(lru_evict_folios, struct cache_ext_eviction_ctx *eviction_ctx,
 		    struct mem_cgroup *memcg) {
 	// only sync the local variables with map on eviction
-	u32 hits_index = HITS_INDEX;
-	u32 misses_index = MISSES_INDEX;
-	bpf_map_update_elem(&lru_stats, &hits_index, &hits, BPF_ANY);
-	bpf_map_update_elem(&lru_stats, &misses_index, &misses, BPF_ANY);
-
-	bpf_printk("LRU Eviction triggered: hits=%llu, misses=%llu\n", hits, misses);
+	save_cache_stats();
+	bpf_printk("LRU Eviction triggered: accesses=%llu, misses=%llu\n", access_counter, miss_counter);
 }
 
 void BPF_STRUCT_OPS(lru_folio_accessed, struct folio *folio) {
-	__sync_fetch_and_add(&hits, 1);
+	increment_access_counter();
 }
 
 void BPF_STRUCT_OPS(lru_folio_evicted, struct folio *folio) {
-	return;
+	increment_evict_counter();
 }
 
 void BPF_STRUCT_OPS(lru_folio_added, struct folio *folio) {
-	__sync_fetch_and_add(&misses, 1);
+	increment_miss_counter();
 }
 
 SEC(".struct_ops.link")
