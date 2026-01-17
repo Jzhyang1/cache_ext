@@ -11,6 +11,7 @@
 #include "dir_watcher.h"
 #include "cache_ext_lhd.bpf.h"
 #include "cache_ext_lhd.skel.h"
+typedef struct cache_ext_lhd_bpf cache_ext_bpf;
 #include "cache_ext_log_util.h"
 
 char *USAGE = "Usage: ./cache_ext_lhd --watch_dir <dir> --cgroup_path <path>\n";

@@ -12,6 +12,7 @@
 
 #include "dir_watcher.h"
 #include "cache_ext_s3fifo.skel.h"
+typedef struct cache_ext_s3fifo_bpf cache_ext_bpf;
 #include "cache_ext_log_util.h"
 
 char *USAGE = "Usage: ./cache_ext_s3fifo --watch_dir <dir> --cgroup_size <size> --cgroup_path <path>\n";

@@ -2,7 +2,7 @@
 #include <stdint.h>
 #include <bpf/bpf.h>
 
-static void print_cache_stats(struct cache_ext_lru_bpf *skel) {
+static void print_cache_stats(struct cache_ext_bpf *skel) {
     uint32_t key;
     uint64_t value;
 

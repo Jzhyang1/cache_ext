@@ -12,6 +12,7 @@
 
 #include "cache_ext_sampling.skel.h"
 #include "dir_watcher.h"
+typedef struct cache_ext_sampling_bpf cache_ext_bpf;
 #include "cache_ext_log_util.h"
 
 char *USAGE = "Usage: ./cache_ext_sampling --watch_dir <dir> --cgroup_path <path>\n";

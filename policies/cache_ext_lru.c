@@ -12,6 +12,7 @@
 
 #include "dir_watcher.h"
 #include "cache_ext_lru.skel.h"
+typedef struct cache_ext_lru_bpf cache_ext_bpf;
 #include "cache_ext_log_util.h"
 
 
