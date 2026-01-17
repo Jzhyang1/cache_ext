@@ -287,7 +287,7 @@ void __always_inline increment_evict_counter() {
 #define EVICTS_INDEX 2
 struct {
     __uint(type, BPF_MAP_TYPE_ARRAY);
-    __uint(max_entries, 2);
+    __uint(max_entries, 3);
     __type(key, u8);
     __type(value, u64);
 } cache_stats SEC(".maps");
