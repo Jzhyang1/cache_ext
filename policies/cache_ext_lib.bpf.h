@@ -259,9 +259,9 @@ static inline u32 bpf_get_random_biased(u32 max) {
 // Metric tracking ////////////////////////////////////////////////////////////
 ///////////////////////////////////////////////////////////////////////////////
 
-u64 volatile access_counter = 0;
-u64 volatile miss_counter = 0;
-u64 volatile evict_counter = 0;
+static u64 volatile access_counter = 0;
+static u64 volatile miss_counter = 0;
+static u64 volatile evict_counter = 0;
 
 void __always_inline reset_counters() {
 	access_counter = 0;
@@ -289,7 +289,7 @@ struct {
     __uint(type, BPF_MAP_TYPE_ARRAY);
     __uint(max_entries, 2);
     __type(key, u8);
-    __type(value, u32);
+    __type(value, u64);
 } cache_stats SEC(".maps");
 
 void __always_inline save_cache_stats() {
