@@ -289,7 +289,7 @@ struct {
     __uint(type, BPF_MAP_TYPE_ARRAY);
     __uint(max_entries, 2);
     __type(key, u8);
-    __type(value, u64);
+    __type(value, u32);
 } cache_stats SEC(".maps");
 
 void __always_inline save_cache_stats() {
