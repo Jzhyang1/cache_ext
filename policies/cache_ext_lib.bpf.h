@@ -263,21 +263,21 @@ static u64 volatile access_counter = 0;
 static u64 volatile miss_counter = 0;
 static u64 volatile evict_counter = 0;
 
-void __always_inline reset_counters() {
+static void __always_inline reset_counters() {
 	access_counter = 0;
 	miss_counter = 0;
 	evict_counter = 0;
 }
 
-void __always_inline increment_access_counter() {
+static void __always_inline increment_access_counter() {
 	__sync_fetch_and_add(&access_counter, 1);
 }
 
-void __always_inline increment_miss_counter() {
+static void __always_inline increment_miss_counter() {
 	__sync_fetch_and_add(&miss_counter, 1);
 }
 
-void __always_inline increment_evict_counter() {
+static void __always_inline increment_evict_counter() {
 	__sync_fetch_and_add(&evict_counter, 1);
 }
 
@@ -292,10 +292,10 @@ struct {
     __type(value, u64);
 } cache_stats SEC(".maps");
 
-void __always_inline save_cache_stats() {
-	u8 access_index = ACCESS_INDEX;
-	u8 misses_index = MISSES_INDEX;
-	u8 evicts_index = EVICTS_INDEX;
+static void __always_inline save_cache_stats() {
+	u32 access_index = ACCESS_INDEX;
+	u32 misses_index = MISSES_INDEX;
+	u32 evicts_index = EVICTS_INDEX;
 	bpf_map_update_elem(&cache_stats, &access_index, &access_counter, BPF_ANY);
 	bpf_map_update_elem(&cache_stats, &misses_index, &miss_counter, BPF_ANY);
 	bpf_map_update_elem(&cache_stats, &evicts_index, &evict_counter, BPF_ANY);
