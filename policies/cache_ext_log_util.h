@@ -3,14 +3,14 @@
 #include <bpf/bpf.h>
 
 static void print_cache_stats(cache_ext_bpf *skel) {
-    int fd = bpf_program__fd(skel->progs.save_stats);
+    int fd = bpf_program__fd(skel->progs.save_cache_stats);
     if (fd < 0) {
-        perror("Failed to get fd of save_stats program");
+        perror("Failed to get fd of save_cache_stats program");
         return;
     }
     int err = bpf_prog_test_run_opts(fd, NULL);
     if (err) {
-        perror("Failed to run save_stats program");
+        perror("Failed to run save_cache_stats program");
         return;
     }
 
