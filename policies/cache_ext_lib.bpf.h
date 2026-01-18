@@ -292,7 +292,8 @@ struct {
     __type(value, u64);
 } cache_stats SEC(".maps");
 
-static void __always_inline save_cache_stats() {
+SEC("syscall")
+void save_cache_stats(void* ctx) {
 	u32 access_index = ACCESS_INDEX;
 	u32 misses_index = MISSES_INDEX;
 	u32 evicts_index = EVICTS_INDEX;

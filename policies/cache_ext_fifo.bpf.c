@@ -48,9 +48,6 @@ void BPF_STRUCT_OPS(fifo_folio_accessed, struct folio *folio) {
 void BPF_STRUCT_OPS(fifo_evict_folios, struct cache_ext_eviction_ctx *eviction_ctx,
 		    struct mem_cgroup *memcg)
 {
-	// only sync the local variables with map on eviction
-	save_cache_stats();
-
 	if (bpf_cache_ext_list_iterate(memcg, main_list, bpf_fifo_evict_cb, eviction_ctx) < 0) {
 		bpf_printk("cache_ext: evict: Failed to iterate main_list\n");
 		return;

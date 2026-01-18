@@ -324,9 +324,6 @@ static s64 bpf_lhd_score_fn(struct cache_ext_list_node *a) {
 void BPF_STRUCT_OPS(lhd_evict_folios, struct cache_ext_eviction_ctx *eviction_ctx,
 	       struct mem_cgroup *memcg)
 {
-	// only sync the local variables with map on eviction
-	save_cache_stats();
-
 	struct sampling_options opts = {
 		.sample_size = 16,
 	};

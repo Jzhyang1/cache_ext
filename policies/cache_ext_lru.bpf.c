@@ -16,9 +16,7 @@ s32 BPF_STRUCT_OPS_SLEEPABLE(lru_init, struct mem_cgroup *memcg) {
 
 void BPF_STRUCT_OPS(lru_evict_folios, struct cache_ext_eviction_ctx *eviction_ctx,
 		    struct mem_cgroup *memcg) {
-	// only sync the local variables with map on eviction
-	save_cache_stats();
-	bpf_printk("LRU Eviction triggered: accesses=%llu, misses=%llu\n", access_counter, miss_counter);
+	return;
 }
 
 void BPF_STRUCT_OPS(lru_folio_accessed, struct folio *folio) {

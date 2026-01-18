@@ -102,8 +102,6 @@ static int iterate_mru(int idx, struct cache_ext_list_node *node)
 void BPF_STRUCT_OPS(mru_evict_folios, struct cache_ext_eviction_ctx *eviction_ctx,
 	       struct mem_cgroup *memcg)
 {
-	// only sync the local variables with map on eviction
-	save_cache_stats();
 	dbg_printk("cache_ext: Hi from the mru_evict_folios hook! :D\n");
 	int ret = bpf_cache_ext_list_iterate(memcg, mru_list, iterate_mru,
 					     eviction_ctx);

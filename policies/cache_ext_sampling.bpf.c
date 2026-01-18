@@ -248,8 +248,6 @@ void BPF_STRUCT_OPS(sampling_evict_folios,
 		    struct cache_ext_eviction_ctx *eviction_ctx,
 		    struct mem_cgroup *memcg)
 {
-	// only sync the local variables with map on eviction
-	save_cache_stats();
 	dbg_printk(
 		"cache_ext: Hi from the sampling_evict_folios hook! :D\n");
 

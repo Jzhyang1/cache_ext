@@ -781,8 +781,6 @@ static int mglru_iter_fn(int idx, struct cache_ext_list_node *a)
 void BPF_STRUCT_OPS(mglru_evict_folios, struct cache_ext_eviction_ctx *eviction_ctx,
 		    struct mem_cgroup *memcg)
 {
-	// only sync the local variables with map on eviction
-	save_cache_stats();
 	DEFINE_LRUGEN_void;
 
 	bool inc_max_seq_failed = false;
