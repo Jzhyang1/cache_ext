@@ -19,13 +19,13 @@ RESULTS_PATH="$BASE_DIR/results"
 ITERATIONS=3
 
 POLICIES=(
+	"cache_ext_lru"
+	"cache_ext_mru"
+	"cache_ext_fifo"
+	"cache_ext_mglru"
+	"cache_ext_sampling"
 	"cache_ext_lhd"
 	"cache_ext_s3fifo"
-	"cache_ext_sampling"
-	"cache_ext_fifo"
-	"cache_ext_mru"
-	"cache_ext_mglru"
-	"cache_ext_lru"
 )
 
 mkdir -p "$RESULTS_PATH"

@@ -9,6 +9,7 @@
 
 #include "cache_ext_mglru.skel.h"
 #include "dir_watcher.h"
+const char *FILENAME = __FILE__;
 typedef struct cache_ext_mglru_bpf cache_ext_bpf;
 #include "cache_ext_log_util.h"
 

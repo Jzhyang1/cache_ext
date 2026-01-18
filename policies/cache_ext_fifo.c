@@ -11,6 +11,7 @@
 
 #include "dir_watcher.h"
 #include "cache_ext_fifo.skel.h"
+const char *FILENAME = __FILE__;
 typedef struct cache_ext_fifo_bpf cache_ext_bpf;
 #include "cache_ext_log_util.h"
 

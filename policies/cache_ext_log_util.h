@@ -20,6 +20,7 @@ static void print_cache_stats(cache_ext_bpf *skel) {
 	// we write to a file because printing gets messed up sometimes
 	FILE *fp = fopen("cache_stats.txt", "a");
 
+    fprintf(fp, "\nCache Statistics %s:\n", FILENAME);
     key = 0; // accesses
     if (bpf_map_lookup_elem(bpf_map__fd(skel->maps.cache_stats), &key, &value) == 0)
         fprintf(fp, "Accesses: %lu\n", value);

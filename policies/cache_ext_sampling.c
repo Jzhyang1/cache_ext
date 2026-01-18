@@ -12,6 +12,7 @@
 
 #include "cache_ext_sampling.skel.h"
 #include "dir_watcher.h"
+const char *FILENAME = __FILE__;
 typedef struct cache_ext_sampling_bpf cache_ext_bpf;
 #include "cache_ext_log_util.h"
 
