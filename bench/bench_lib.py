@@ -65,6 +65,10 @@ class CacheExtPolicy:
                 "Policy thread exited unexpectedly: %s"
                 % self._policy_thread.stderr.read().decode("utf-8")
             )
+        
+        # Save the stdout of the policy thread to a log file
+        with open(f"{os.path.basename(self.cgroup_path)}.log", "wb") as f:
+            f.write(self._policy_thread.stdout.read())
 
     def stop(self):
         if not self.has_started:
