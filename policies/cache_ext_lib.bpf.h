@@ -255,6 +255,14 @@ static inline u32 bpf_get_random_biased(u32 max) {
 	return bpf_get_prandom_u32() % max;
 }
 
+#define create_list(name, memcg)					\
+	u64 name = bpf_cache_ext_ds_registry_new_list(memcg);	\
+	if (name == 0) {						\
+		bpf_printk("cache_ext: init: Failed to create " #name "\n"); \
+		return -1;						\
+	}								\
+	bpf_printk("cache_ext: Created " #name ": %llu\n", name);
+
 ///////////////////////////////////////////////////////////////////////////////
 // Metric tracking ////////////////////////////////////////////////////////////
 ///////////////////////////////////////////////////////////////////////////////
