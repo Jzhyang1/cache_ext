@@ -65,14 +65,12 @@ class CacheExtPolicy:
                 "Policy thread exited unexpectedly: %s"
                 % self._policy_thread.stderr.read().decode("utf-8")
             )
-        
-        # Save the stdout of the policy thread to a log file
-        with open(f"{os.path.basename(self.cgroup_path)}.log", "wb") as f:
-            f.write(self._policy_thread.stdout.read())
 
     def stop(self):
         if not self.has_started:
             raise Exception("Policy not started")
+        
+        assert self._policy_thread is not None
         try:
             run(["sudo", "kill", "-2", str(self._policy_thread.pid)])
         except Exception as e:
@@ -90,10 +88,16 @@ class CacheExtPolicy:
             run(["sudo", "sh", "-c", f"dmesg >> {error_file}"])
 
         out, err = self._policy_thread.communicate()
+        out, err = out.decode("utf-8"), err.decode("utf-8")
         with suppress(subprocess.CalledProcessError):
             run(["sudo", "rm", "/sys/fs/bpf/cache_ext/scan_pids"])
-        log.info("Policy thread stdout: %s", out.decode("utf-8"))
-        log.info("Policy thread stderr: %s", err.decode("utf-8"))
+        log.info("Policy thread stdout: %s", out)
+        log.info("Policy thread stderr: %s", err)
+        with open(f"{self.cgroup_path}_out.log", "w") as f:
+            f.write(out)
+        with open(f"{self.cgroup_path}_err.log", "w") as f:
+            f.write(err)
+
         self.has_started = False
         self._policy_thread = None
 
