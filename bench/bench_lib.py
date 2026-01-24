@@ -9,7 +9,7 @@ import sys
 from abc import ABC, abstractmethod
 from contextlib import contextmanager, suppress
 from subprocess import CalledProcessError
-from time import sleep
+from time import sleep, time
 from typing import Dict, List, Union
 
 from ruamel.yaml import YAML
@@ -93,9 +93,11 @@ class CacheExtPolicy:
             run(["sudo", "rm", "/sys/fs/bpf/cache_ext/scan_pids"])
         log.info("Policy thread stdout: %s", out)
         log.info("Policy thread stderr: %s", err)
-        with open(f"{self.cgroup_path}_out.log", "w") as f:
+        with open(f"{self.cgroup_path}_out.log", "a") as f:
+            f.write(f"--- Stopped at {time()} ---\n")
             f.write(out)
-        with open(f"{self.cgroup_path}_err.log", "w") as f:
+        with open(f"{self.cgroup_path}_err.log", "a") as f:
+            f.write(f"--- Stopped at {time()} ---\n")
             f.write(err)
 
         self.has_started = False
