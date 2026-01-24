@@ -70,22 +70,26 @@ class CacheExtPolicy:
         if not self.has_started:
             raise Exception("Policy not started")
         
+        cgroup = os.path.splitext(os.path.basename(self.cgroup_path))[0]
+        loader = os.path.splitext(os.path.basename(self.loader_path))[0]
+        out_path = f"{cgroup}_out.log"
+        err_path = f"{cgroup}_err.log"
+        
         assert self._policy_thread is not None
         try:
             run(["sudo", "kill", "-2", str(self._policy_thread.pid)])
         except Exception as e:
-            # name of the error file is cgroup + loader
-            cgroup = os.path.splitext(os.path.basename(self.cgroup_path))[0]
-            loader = os.path.splitext(os.path.basename(self.loader_path))[0]
-            error_file = f"/data/err_{cgroup}_{loader}.log"
-            log.error("Failed to stop policy thread, saving error log to %s", error_file)
+            log.error("Failed to stop policy thread, saving error log to %s", err_path)
+            
+            run(["sudo", "sh", "-c", f"echo '--- {loader} crashed at {time()} ---' >> {err_path}"])
+
             # log the last part of the error message
-            error_message = str(e)[-500:]
+            msg = str(e)[-500:]
             # clean the error message
-            error_message = error_message.replace("'", '"')
-            run(["sudo", "sh", "-c", f"echo '{error_message}' >> {error_file}"])
+            msg = msg.replace("'", '"')
+            run(["sudo", "sh", "-c", f"echo '{msg}' >> {err_path}"])
             # log the dmesg output
-            run(["sudo", "sh", "-c", f"dmesg >> {error_file}"])
+            run(["sudo", "sh", "-c", f"dmesg >> {err_path}"])
 
         out, err = self._policy_thread.communicate()
         out, err = out.decode("utf-8"), err.decode("utf-8")
@@ -93,11 +97,11 @@ class CacheExtPolicy:
             run(["sudo", "rm", "/sys/fs/bpf/cache_ext/scan_pids"])
         log.info("Policy thread stdout: %s", out)
         log.info("Policy thread stderr: %s", err)
-        with open(f"{self.cgroup_path}_out.log", "a") as f:
-            f.write(f"--- Stopped at {time()} ---\n")
+        with open(out_path, "a") as f:
+            f.write(f"--- {loader} stopped at {time()} ---\n")
             f.write(out)
-        with open(f"{self.cgroup_path}_err.log", "a") as f:
-            f.write(f"--- Stopped at {time()} ---\n")
+        with open(err_path, "a") as f:
+            f.write(f"--- {loader} stopped at {time()} ---\n")
             f.write(err)
 
         self.has_started = False
