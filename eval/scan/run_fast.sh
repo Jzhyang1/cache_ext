@@ -37,4 +37,5 @@ python3 "$BENCH_PATH/bench_scan.py" \
 	--iterations "$ITERATIONS" \
 	--scan-util-path "$SCANUTIL_PATH/linscansparse.out"
 
+sudo dmesg >> "scan_fast_dmesg.log" || true
 echo "SCAN benchmark completed. Results saved to $RESULTS_PATH."

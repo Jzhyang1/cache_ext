@@ -21,7 +21,9 @@ void BPF_STRUCT_OPS(lru_evict_folios, struct cache_ext_eviction_ctx *eviction_ct
 
 void BPF_STRUCT_OPS(lru_folio_accessed, struct folio *folio) {
 	increment_access_counter();
-	bpf_printk("lru_folio_accessed called on %x\n", folio);
+	if (access_counter < 1000) {
+		bpf_printk("lru_folio_accessed called on %x -> %d\n", folio, access_counter);
+	}
 }
 
 void BPF_STRUCT_OPS(lru_folio_evicted, struct folio *folio) {
@@ -30,7 +32,9 @@ void BPF_STRUCT_OPS(lru_folio_evicted, struct folio *folio) {
 
 void BPF_STRUCT_OPS(lru_folio_added, struct folio *folio) {
 	increment_miss_counter();
-	bpf_printk("lru_folio_added called on %x\n", folio);
+	if (miss_counter < 1000) {
+		bpf_printk("lru_folio_added called on %x -> %d\n", folio, miss_counter);
+	}
 }
 
 SEC(".struct_ops.link")
