@@ -50,17 +50,12 @@ class FileSearchBenchmark(BenchmarkFramework):
     def generate_configs(self, configs: List[Dict]) -> List[Dict]:
         configs = add_config_option("passes", [10], configs)
         configs = add_config_option("cgroup_size", [1 * GiB], configs)
-        if self.args.default_only:
-            configs = add_config_option(
-                "cgroup_name", [DEFAULT_BASELINE_CGROUP], configs
-            )
-
-        else:
-            configs = add_config_option(
-                "cgroup_name",
-                [DEFAULT_BASELINE_CGROUP, DEFAULT_CACHE_EXT_CGROUP],
-                configs,
-            )
+    
+        configs = add_config_option(
+            "cgroup_name",
+            [DEFAULT_CACHE_EXT_CGROUP],
+            configs,
+        )
 
         configs = add_config_option("benchmark", ["filesearch"], configs)
         configs = add_config_option(
