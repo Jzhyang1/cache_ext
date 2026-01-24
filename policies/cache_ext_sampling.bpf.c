@@ -124,12 +124,12 @@ s32 BPF_STRUCT_OPS_SLEEPABLE(sampling_init, struct mem_cgroup *memcg)
 
 void BPF_STRUCT_OPS(sampling_folio_added, struct folio *folio)
 {
-	increment_miss_counter();
 	dbg_printk(
 		"cache_ext: Hi from the sampling_folio_added hook! :D\n");
 	if (!is_folio_relevant(folio)) {
 		return;
 	}
+	increment_miss_counter();
 
 	int ret = bpf_cache_ext_list_add_tail(sampling_list, folio);
 	if (ret != 0) {
@@ -149,10 +149,10 @@ void BPF_STRUCT_OPS(sampling_folio_added, struct folio *folio)
 
 void BPF_STRUCT_OPS(sampling_folio_accessed, struct folio *folio)
 {
-	increment_access_counter();
 	if (!is_folio_relevant(folio)) {
 		return;
 	}
+	increment_access_counter();
 	// TODO: Update folio metadata with other values we want to track
 	struct folio_metadata *meta;
 	u64 key = (u64)folio;

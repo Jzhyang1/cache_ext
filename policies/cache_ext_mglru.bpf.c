@@ -872,28 +872,28 @@ void BPF_STRUCT_OPS(mglru_evict_folios, struct cache_ext_eviction_ctx *eviction_
 
 void BPF_STRUCT_OPS(mglru_folio_added, struct folio *folio)
 {
-	increment_miss_counter();
 	if (!is_folio_relevant(folio)) {
 		return;
 	}
+	increment_miss_counter();
 	lru_gen_add_folio(folio);
 }
 
 void BPF_STRUCT_OPS(mglru_folio_accessed, struct folio *folio)
 {
-	increment_access_counter();
 	if (!is_folio_relevant(folio)) {
 		return;
 	}
+	increment_access_counter();
 	folio_inc_refs(folio);
 }
 
 void BPF_STRUCT_OPS(mglru_folio_evicted, struct folio *folio)
 {
-	increment_evict_counter();
 	if (!is_folio_relevant(folio)) {
 		return;
 	}
+	increment_evict_counter();
 	DEFINE_LRUGEN_void;
 	// Remove tracked metadata
 	struct folio_metadata *metadata;

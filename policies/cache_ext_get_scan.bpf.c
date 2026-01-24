@@ -130,25 +130,10 @@ inline u64 get_sampling_list(enum ListType list_type)
 
 inline bool is_folio_relevant(struct folio *folio)
 {
-	if (!folio) {
-		// bpf_printk("folio not relevant because it's null\n");
+	if (!folio || folio->mapping == NULL || folio->mapping->host == NULL) {
 		return false;
 	}
-	if (folio->mapping == NULL) {
-		// bpf_printk("folio not relevant because it's mapping is null\n");
-		return false;
-	}
-	if (folio->mapping->host == NULL) {
-		// bpf_printk("folio not relevant because it's host is null\n");
-		return false;
-	}
-	bool res = inode_in_watchlist(folio->mapping->host->i_ino);
-	// if (!res) {
-	// 	bpf_printk("folio not relevant because it's inode is not in watchlist, inode %llu\n",
-	// 		   folio->mapping->host->i_ino);
-
-	// }
-	return res;
+	return inode_in_watchlist(folio->mapping->host->i_ino);
 }
 
 // SEC("struct_ops.s/mixed_init")
@@ -180,12 +165,12 @@ s32 BPF_STRUCT_OPS_SLEEPABLE(mixed_init, struct mem_cgroup *memcg)
 
 void BPF_STRUCT_OPS(mixed_folio_added, struct folio *folio)
 {
-	increment_miss_counter();
 	dbg_printk(
 		"cache_ext: Hi from the mixed_folio_added hook! :D\n");
 	if (!is_folio_relevant(folio)) {
 		return;
 	}
+	increment_miss_counter();
     enum ListType list_type = LIST_GENERAL;
 	bool touched_by_scan = is_scanning_pid();
     if (touched_by_scan) {
@@ -226,10 +211,10 @@ void BPF_STRUCT_OPS(mixed_folio_added, struct folio *folio)
 
 void BPF_STRUCT_OPS(mixed_folio_accessed, struct folio *folio)
 {
-	increment_access_counter();
 	if (!is_folio_relevant(folio)) {
 		return;
 	}
+	increment_access_counter();
 	// TODO: Update folio metadata with other values we want to track
 	struct folio_metadata *meta;
 	u64 key = (u64)folio;

@@ -11,11 +11,33 @@ char _license[] SEC("license") = "GPL";
 #define ENOENT		2  /* include/uapi/asm-generic/errno-base.h */
 #define INT64_MAX	(9223372036854775807LL)
 
-// Set from userspace. In terms of number of pages.
-// TODO: change
+/*
+* In S3FIFO, we have 3 FIFO lists: small, main, and ghost.
+* In S3pFIFO, we have 2 FIFO lists: small and main, 
+*  the ghost list is a simple direct-mapped hash.
+* A change in behavior: 
+*  folios are hashed according to (address_space, offset/folio_size/ASSOC_GROUP) to draw on spatial locality.
+*  any miss will be added to the ghost list as 0 (or 1 if folio_accessed is not called after folio_added)
+*  any hit will add 1 to the folio ghost entry (inactive -> active)
+*  any miss to an "active" ghost entry will add it to the main list
+*  any miss to an "inactive" ghost entry will add it to the small list
+*  an eviction will set the ghost entry to 0
+*
+* Expected tradeoffs compared to S3FIFO:
+* - more false positives in ghost list, leading to more unused entries in main list
+* - faster promotion for actual hot pages due to spatial locality
+*
+* This should reduce overhead of folio metadata at the cost of some accuracy.
+* We wish to see how much accuracy is lost.
+*/
 
-//#define CACHE_SIZE (((1ull << 30) * 2) / 4096)
-#define CACHE_SIZE (((1ull << 20) * 200) / 4096)
+#define ASSOC_GROUP 2  	// Number of pages referenced by each ghost entry
+						// should equal the number of states of a ghost entry
+
+#define GHOST_STATE_INACTIVE 1
+#define GHOST_STATE_ACTIVE 2
+
+// Set from userspace. In terms of number of pages.
 const volatile size_t cache_size = 0;
 
 struct folio_metadata {
@@ -38,10 +60,10 @@ struct {
 struct {
 	__uint(type, BPF_MAP_TYPE_LRU_HASH);
 	__type(key, struct ghost_entry);
-	__type(value, u8);
-	//__uint(max_entries, CACHE_SIZE); // TODO: change
+	__type(value, u8);	// active/inactive state
 	__uint(map_flags, BPF_F_NO_COMMON_LRU);  // Per-CPU LRU eviction logic
 } ghost_map SEC(".maps");
+
 
 static u64 main_list;
 static u64 small_list;

@@ -8,6 +8,12 @@
 
 char _license[] SEC("license") = "GPL";
 
+static inline bool is_folio_relevant(struct folio *folio) {
+	if (!folio || !folio->mapping || !folio->mapping->host)
+		return false;
+
+	return inode_in_watchlist(folio->mapping->host->i_ino);
+}
 
 s32 BPF_STRUCT_OPS_SLEEPABLE(lru_init, struct mem_cgroup *memcg) {
 	reset_counters();
@@ -20,7 +26,11 @@ void BPF_STRUCT_OPS(lru_evict_folios, struct cache_ext_eviction_ctx *eviction_ct
 }
 
 void BPF_STRUCT_OPS(lru_folio_accessed, struct folio *folio) {
+	if (!is_folio_relevant(folio))
+		return;
+
 	increment_access_counter();
+	__sync_fetch_and_add(&ucounter, 1);
 	// bpf_printk("lru_folio_accessed called on %x -> %d\n", folio, access_counter);
 }
 
@@ -29,7 +39,15 @@ void BPF_STRUCT_OPS(lru_folio_evicted, struct folio *folio) {
 }
 
 void BPF_STRUCT_OPS(lru_folio_added, struct folio *folio) {
+	if (!is_folio_relevant(folio))
+		return;
+		
 	increment_miss_counter();
+	u64 miss = miss_counter, access = access_counter;
+	if (miss > access) {
+		bpf_printk("Miss counter (%d) exceeded access counter (%d) on folio %x\n",
+			miss, access, folio);
+	}
 	// bpf_printk("lru_folio_added called on %x -> %d\n", folio, miss_counter);
 }
 

@@ -51,11 +51,11 @@ s32 BPF_STRUCT_OPS_SLEEPABLE(mru_init, struct mem_cgroup *memcg)
 
 void BPF_STRUCT_OPS(mru_folio_added, struct folio *folio)
 {
-	increment_miss_counter();
 	dbg_printk("cache_ext: Hi from the mru_folio_added hook! :D\n");
 	if (!is_folio_relevant(folio)) {
 		return;
 	}
+	increment_miss_counter();
 
 	int ret = bpf_cache_ext_list_add(mru_list, folio);
 	if (ret != 0) {
@@ -67,13 +67,13 @@ void BPF_STRUCT_OPS(mru_folio_added, struct folio *folio)
 
 void BPF_STRUCT_OPS(mru_folio_accessed, struct folio *folio)
 {
-	increment_access_counter();
 	int ret;
 	dbg_printk("cache_ext: Hi from the mru_folio_accessed hook! :D\n");
 
 	if (!is_folio_relevant(folio)) {
 		return;
 	}
+	increment_access_counter();
 
 	ret = bpf_cache_ext_list_move(mru_list, folio, false);
 	if (ret != 0) {

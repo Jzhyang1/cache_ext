@@ -42,6 +42,8 @@ static int bpf_fifo_evict_cb(int idx, struct cache_ext_list_node *a)
 }
 
 void BPF_STRUCT_OPS(fifo_folio_accessed, struct folio *folio) {
+	if (!is_folio_relevant(folio))
+		return;
 	increment_access_counter();
 }
 
@@ -63,9 +65,9 @@ void BPF_STRUCT_OPS(fifo_folio_evicted, struct folio *folio) {
 }
 
 void BPF_STRUCT_OPS(fifo_folio_added, struct folio *folio) {
-	increment_miss_counter();
 	if (!is_folio_relevant(folio))
 		return;
+	increment_miss_counter();
 
 	if (bpf_cache_ext_list_add_tail(main_list, folio)) {
 		bpf_printk("cache_ext: added: Failed to add folio to main_list\n");
