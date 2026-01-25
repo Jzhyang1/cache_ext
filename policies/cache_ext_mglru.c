@@ -14,33 +14,6 @@ typedef struct cache_ext_mglru_bpf cache_ext_bpf;
 #include "cache_ext_log_util.h"
 
 char *USAGE = "Usage: ./cache_ext_mglru --watch_dir <dir> --cgroup_size <size> --cgroup_path <path>\n";
-struct cmdline_args {
-	char *watch_dir;
-	char *cgroup_path;
-};
-
-static struct argp_option options[] = { 
-	{ "watch_dir", 'w', "DIR", 0, "Directory to watch" },
-	{ "cgroup_size", 's', "SIZE", 0, "Size of the cgroup" },
-	{ "cgroup_path", 'c', "PATH", 0, "Path to cgroup (e.g., /sys/fs/cgroup/cache_ext_test)" },
-	{ 0 } 
-};
-
-static error_t parse_opt(int key, char *arg, struct argp_state *state)
-{
-	struct cmdline_args *args = state->input;
-	switch (key) {
-	case 'w':
-		args->watch_dir = arg;
-		break;
-	case 'c':
-		args->cgroup_path = arg;
-		break;
-	default:
-		return ARGP_ERR_UNKNOWN;
-	}
-	return 0;
-}
 
 int main(int argc, char **argv)
 {
