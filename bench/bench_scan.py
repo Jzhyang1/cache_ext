@@ -69,7 +69,7 @@ class FileSearchBenchmark(BenchmarkFramework):
         disable_smt()
         if config["cgroup_name"] == DEFAULT_CACHE_EXT_CGROUP:
             recreate_cache_ext_cgroup(limit_in_bytes=config["cgroup_size"])
-            self.cache_ext_policy.start()
+            self.cache_ext_policy.start(config["cgroup_size"])
         else:
             recreate_baseline_cgroup(limit_in_bytes=config["cgroup_size"])
         self.start_time = time()
