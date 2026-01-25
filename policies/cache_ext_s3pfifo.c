@@ -11,12 +11,12 @@
 #include <unistd.h>
 
 #include "dir_watcher.h"
-#include "cache_ext_s3fifo.skel.h"
+#include "cache_ext_s3pfifo.skel.h"
 const char *FILENAME = __FILE__;
-typedef struct cache_ext_s3fifo_bpf cache_ext_bpf;
+typedef struct cache_ext_s3pfifo_bpf cache_ext_bpf;
 #include "cache_ext_log_util.h"
 
-char *USAGE = "Usage: ./cache_ext_s3fifo --watch_dir <dir> --cgroup_size <size> --cgroup_path <path>\n";
+char *USAGE = "Usage: ./cache_ext_s3pfifo --watch_dir <dir> --cgroup_size <size> --cgroup_path <path>\n";
 struct cmdline_args {
 	char *watch_dir;
         uint64_t cgroup_size;
@@ -113,7 +113,7 @@ static int validate_watch_dir(const char *watch_dir, char *watch_dir_full_path) 
 
 int main(int argc, char **argv) {
 	struct cmdline_args args = { 0 };
-	struct cache_ext_s3fifo_bpf *skel = NULL;
+	struct cache_ext_s3pfifo_bpf *skel = NULL;
 	struct bpf_link *link = NULL;
 	struct sigaction sa;
 	char watch_dir_path[PATH_MAX];
@@ -145,7 +145,7 @@ int main(int argc, char **argv) {
 		return 1;
 	}
 
-	skel = cache_ext_s3fifo_bpf__open();
+	skel = cache_ext_s3pfifo_bpf__open();
 	if (!skel) {
 		perror("Failed to open BPF skeleton");
 		goto cleanup;
@@ -167,7 +167,7 @@ int main(int argc, char **argv) {
 	watch_dir_path_len_map(skel) = strlen(watch_dir_path);
 	strcpy(watch_dir_path_map(skel), watch_dir_path);
 
-	if (cache_ext_s3fifo_bpf__load(skel)) {
+	if (cache_ext_s3pfifo_bpf__load(skel)) {
 		perror("Failed to load BPF skeleton");
 		ret = 1;
 		goto cleanup;
@@ -179,7 +179,7 @@ int main(int argc, char **argv) {
 		goto cleanup;
 	}
 
-	link = bpf_map__attach_cache_ext_ops(skel->maps.s3fifo_ops, cgroup_fd);
+	link = bpf_map__attach_cache_ext_ops(skel->maps.s3pfifo_ops, cgroup_fd);
 	if (link == NULL) {
 		perror("Failed to attach cache_ext_ops to cgroup");
 		ret = 1;
@@ -187,7 +187,7 @@ int main(int argc, char **argv) {
 	}
 
 	// This is necessary for the dir_watcher functionality
-	if (cache_ext_s3fifo_bpf__attach(skel)) {
+	if (cache_ext_s3pfifo_bpf__attach(skel)) {
 		perror("Failed to attach BPF skeleton");
 		ret = 1;
 		goto cleanup;
@@ -202,6 +202,6 @@ cleanup:
 	print_cache_stats(skel);
 	close(cgroup_fd);
 	bpf_link__destroy(link);
-	cache_ext_s3fifo_bpf__destroy(skel);
+	cache_ext_s3pfifo_bpf__destroy(skel);
 	return ret;
 }

@@ -85,6 +85,7 @@ static inline u64 hash_ghost_key(struct folio *folio) {
 
 /*
  * Gets an entry from the ghost list
+ * returns 255 if not found (to keep in cache if get fails)
  */
 static inline u8 get_folio_ghost(struct folio *folio) {
 	u64 hash = hash_ghost_key(folio);
@@ -94,6 +95,7 @@ static inline u8 get_folio_ghost(struct folio *folio) {
 	}
 	return *state;
 }
+// returns 255 if not found (to keep in cache if get fails)
 static inline u8 get_folio_ghost_decr(struct folio *folio) {
 	u64 hash = hash_ghost_key(folio);
 	u8 *state = bpf_map_lookup_elem(&ghost_map, &hash);
@@ -106,15 +108,17 @@ static inline u8 get_folio_ghost_decr(struct folio *folio) {
 	}
 	return prev_state;
 }
+// returns 0 if not found (to add to small cache if not found)
 static inline u8 get_folio_ghost_incr(struct folio *folio) {
 	u64 hash = hash_ghost_key(folio);
 	u8 *state = bpf_map_lookup_elem(&ghost_map, &hash);
 	if (state == NULL) {
-		return 255;
+		return 0;
 	}
 	u8 prev_state = *state;
 	if (prev_state < GHOST_STATE_ACTIVE) {
 		*state = prev_state + 1;
+		return prev_state + 1;
 	}
 	return prev_state;
 }
@@ -243,32 +247,21 @@ void BPF_STRUCT_OPS(s3pfifo_folio_added, struct folio *folio) {
 		return;
 	increment_miss_counter();
 
-	u64 key = (u64)folio;
-	struct folio_metadata new_meta = {
-		.freq = 0,
-	};
-
+	u8 count = get_folio_ghost_incr(folio);
 	u64 list_to_add;
-	if (folio_in_ghost(folio)) {
+	if (count >= GHOST_STATE_ACTIVE) {
+		// Add to main list
 		list_to_add = main_list;
-		new_meta.in_main = true;
 		__sync_fetch_and_add(&main_list_size, 1);
 	} else {
+		// Add to small list
 		list_to_add = small_list;
-		new_meta.in_main = false;
 		__sync_fetch_and_add(&small_list_size, 1);
 	}
 
 	if (bpf_cache_ext_list_add_tail(list_to_add, folio)) {
 		// TODO: add back to ghost_map?
 		bpf_printk("cache_ext: added: Failed to add folio to main_list\n");
-		return;
-	}
-
-	if (bpf_map_update_elem(&folio_metadata_map, &key, &new_meta, BPF_ANY)) {
-		// TODO: add back to ghost_map? + error check delete call?
-		bpf_cache_ext_list_del(folio);
-		bpf_printk("cache_ext: added: Failed to create folio metadata\n");
 		return;
 	}
 }
