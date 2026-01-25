@@ -5,6 +5,8 @@ echo "Installing ripgrep..."
 sudo apt-get update
 sudo apt-get install -y ripgrep
 
+make -C ScanUtil
+
 SCRIPT_PATH=$(realpath $0)
 BASE_DIR=$(dirname $SCRIPT_PATH)
 CLONE_PATH="$BASE_DIR/.."
