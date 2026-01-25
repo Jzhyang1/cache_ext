@@ -76,11 +76,10 @@ static inline bool is_folio_relevant(struct folio *folio) {
  * Hash function for ghost map based on (address_space, offset/folio_size/ASSOC_GROUP)
  */
 static inline u64 hash_ghost_key(struct folio *folio) {
-	u64 address_space = (u64)folio->mapping->host;
 	u64 offset = folio->index & (-ASSOC_GROUP);
 
-	// Simple XOR hash
-	return address_space ^ offset;
+	// We can hardly call this a hash, but eBPF has restrictions
+	return offset;
 }
 
 /*
