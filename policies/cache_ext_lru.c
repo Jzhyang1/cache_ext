@@ -17,7 +17,7 @@ typedef struct cache_ext_lru_bpf cache_ext_bpf;
 #include "cache_ext_log_util.h"
 
 
-char *USAGE = "Usage: ./cache_ext_lru --watch_dir <dir> --cgroup_path <path>\n";
+char *USAGE = "Usage: ./cache_ext_lru --watch_dir <dir> --cgroup_size <size> --cgroup_path <path>\n";
 struct cmdline_args {
 	char *watch_dir;
 	char *cgroup_path;

@@ -12,8 +12,7 @@ const char *FILENAME = __FILE__;
 typedef struct cache_ext_mru_bpf cache_ext_bpf;
 #include "cache_ext_log_util.h"
 
-char *USAGE =
-	"Usage: ./cache_ext_mru --watch_dir <dir> --cgroup_path <path>\n";
+char *USAGE = "Usage: ./cache_ext_mru --watch_dir <dir> --cgroup_size <size> --cgroup_path <path>\n";
 
 struct cmdline_args {
 	char *watch_dir;
