@@ -19,6 +19,7 @@ RESULTS_PATH="$BASE_DIR/results"
 ITERATIONS=3
 
 POLICIES=(
+	"cache_ext_s3pfifo"
 	"cache_ext_lru"
 	"cache_ext_mru"
 	"cache_ext_fifo"
