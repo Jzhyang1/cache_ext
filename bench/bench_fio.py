@@ -134,11 +134,7 @@ class FioBenchmark(BenchmarkFramework):
         )
         if config["cgroup_name"] == DEFAULT_CACHE_EXT_CGROUP:
             recreate_cache_ext_cgroup(limit_in_bytes=config["cgroup_size"])
-            policy_loader_name = os.path.basename(self.cache_ext_policy.loader_path)
-            if policy_loader_name == "cache_ext_s3fifo.out":
-                self.cache_ext_policy.start(cgroup_size=config["cgroup_size"])
-            elif policy_loader_name:
-                self.cache_ext_policy.start()
+            self.cache_ext_policy.start(cgroup_size=config["cgroup_size"])
         else:
             recreate_baseline_cgroup(limit_in_bytes=config["cgroup_size"])
 

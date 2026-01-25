@@ -156,7 +156,7 @@ static int bpf_s3pfifo_score_small_fn(int idx, struct cache_ext_list_node *a)
 	if (folio_test_dirty(a->folio) || folio_test_writeback(a->folio))
 		return CACHE_EXT_CONTINUE_ITER;
 
-	u8 ghost_state = get_folio_ghost(a->folio);
+	u8 ghost_state = get_folio_ghost_decr(a->folio);
 	if (ghost_state <= GHOST_STATE_INACTIVE) {
 		// Evict
 		return CACHE_EXT_EVICT_NODE;
