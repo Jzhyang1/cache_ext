@@ -75,11 +75,14 @@ static inline bool is_folio_relevant(struct folio *folio) {
 /*
  * Hash function for ghost map based on (address_space, offset/folio_size/ASSOC_GROUP)
  */
-static inline u64 hash_ghost_key(struct folio *folio) {
-	u64 offset = folio->index & (-ASSOC_GROUP);
+static inline struct ghost_entry hash_ghost_key(struct folio *folio) {
+	struct ghost_entry key = {
+		.address_space = (u64)folio->mapping,
+		.offset = folio->index & (-ASSOC_GROUP),
+	};
 
 	// We can hardly call this a hash, but eBPF has restrictions
-	return offset;
+	return key;
 }
 
 /*
@@ -87,7 +90,7 @@ static inline u64 hash_ghost_key(struct folio *folio) {
  * returns 255 if not found (to keep in cache if get fails)
  */
 static inline u8 get_folio_ghost(struct folio *folio) {
-	u64 hash = hash_ghost_key(folio);
+	struct ghost_entry hash = hash_ghost_key(folio);
 	u8 *state = bpf_map_lookup_elem(&ghost_map, &hash);
 	if (state == NULL) {
 		return 255;
@@ -96,7 +99,7 @@ static inline u8 get_folio_ghost(struct folio *folio) {
 }
 // returns 255 if not found (to keep in cache if get fails)
 static inline u8 get_folio_ghost_decr(struct folio *folio) {
-	u64 hash = hash_ghost_key(folio);
+	struct ghost_entry hash = hash_ghost_key(folio);
 	u8 *state = bpf_map_lookup_elem(&ghost_map, &hash);
 	if (state == NULL) {
 		return 255;
@@ -109,7 +112,7 @@ static inline u8 get_folio_ghost_decr(struct folio *folio) {
 }
 // returns 0 if not found (to add to small cache if not found)
 static inline u8 get_folio_ghost_incr(struct folio *folio) {
-	u64 hash = hash_ghost_key(folio);
+	struct ghost_entry hash = hash_ghost_key(folio);
 	u8 *state = bpf_map_lookup_elem(&ghost_map, &hash);
 	if (state == NULL) {
 		return 0;
@@ -122,7 +125,7 @@ static inline u8 get_folio_ghost_incr(struct folio *folio) {
 	return prev_state;
 }
 static inline void zero_folio_ghost(struct folio *folio) {
-	u64 hash = hash_ghost_key(folio);
+	struct ghost_entry hash = hash_ghost_key(folio);
 	u8 zero = 0;
 	bpf_map_update_elem(&ghost_map, &hash, &zero, BPF_ANY);
 }
