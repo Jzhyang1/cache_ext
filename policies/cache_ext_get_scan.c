@@ -19,10 +19,12 @@ struct cmdline_args {
 	char *cgroup_path;
 };
 
-static struct argp_option options[] = { { "watch_dir", 'w', "DIR", 0, "Directory to watch" },
-					{ "cgroup_path", 'c', "PATH", 0,
-					  "Path to cgroup (e.g., /sys/fs/cgroup/cache_ext_test)" },
-					{ 0 } };
+static struct argp_option options[] = { 
+	{ "watch_dir", 'w', "DIR", 0, "Directory to watch" },
+	{ "cgroup_size", 's', "SIZE", 0, "Size of the cgroup" },
+	{ "cgroup_path", 'c', "PATH", 0, "Path to cgroup (e.g., /sys/fs/cgroup/cache_ext_test)" },
+	{ 0 }
+};
 
 static error_t parse_opt(int key, char *arg, struct argp_state *state)
 {

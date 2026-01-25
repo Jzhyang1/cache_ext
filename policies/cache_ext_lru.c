@@ -25,6 +25,7 @@ struct cmdline_args {
 
 static struct argp_option options[] = {
 	{ "watch_dir", 'w', "DIR", 0, "Directory to watch" },
+	{ "cgroup_size", 's', "SIZE", 0, "Size of the cgroup" },
 	{ "cgroup_path", 'c', "PATH", 0, "Path to cgroup (e.g., /sys/fs/cgroup/cache_ext_test)" },
 	{ 0 },
 };
