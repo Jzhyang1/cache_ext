@@ -22,28 +22,6 @@ struct cmdline_args {
 	char *cgroup_path;
 };
 
-static struct argp_option options[] = { 
-	{ "watch_dir", 'w', "DIR", 0, "Directory to watch" },
-	{ "cgroup_size", 's', "SIZE", 0, "Size of the cgroup" },
-	{ "cgroup_path", 'c', "PATH", 0, "Path to cgroup (e.g., /sys/fs/cgroup/cache_ext_test)" },
-	{ 0 } };
-
-static error_t parse_opt(int key, char *arg, struct argp_state *state)
-{
-	struct cmdline_args *args = state->input;
-	switch (key) {
-	case 'w':
-		args->watch_dir = arg;
-		break;
-	case 'c':
-		args->cgroup_path = arg;
-		break;
-	default:
-		return ARGP_ERR_UNKNOWN;
-	}
-	return 0;
-}
-
 int main(int argc, char **argv)
 {
 	int ret = 1;
@@ -54,19 +32,8 @@ int main(int argc, char **argv)
 
 	// Parse command line arguments
 	struct cmdline_args args = { 0 };
-	struct argp argp = { options, parse_opt, 0, 0 };
-	argp_parse(&argp, argc, argv, 0, 0, &args);
-
-	// Validate arguments
-	if (args.watch_dir == NULL) {
-		fprintf(stderr, "Missing required argument: watch_dir\n");
+	if (parse_args(argc, argv, &args))
 		return 1;
-	}
-
-	if (args.cgroup_path == NULL) {
-		fprintf(stderr, "Missing required argument: cgroup_path\n");
-		return 1;
-	}
 
 	// Does watch_dir exist?
 	if (access(args.watch_dir, F_OK) == -1) {

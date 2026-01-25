@@ -52,19 +52,8 @@ int main(int argc, char **argv)
 
 	// Parse command line arguments
 	struct cmdline_args args = { 0 };
-	struct argp argp = { options, parse_opt, 0, 0 };
-	argp_parse(&argp, argc, argv, 0, 0, &args);
-
-	// Validate arguments
-	if (args.watch_dir == NULL) {
-		fprintf(stderr, "Missing required argument: watch_dir\n");
+	if (parse_args(argc, argv, &args))
 		return 1;
-	}
-
-	if (args.cgroup_path == NULL) {
-		fprintf(stderr, "Missing required argument: cgroup_path\n");
-		return 1;
-	}
 
 	// Does watch_dir exist?
 	if (access(args.watch_dir, F_OK) == -1) {

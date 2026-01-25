@@ -16,55 +16,11 @@ typedef struct cache_ext_fifo_bpf cache_ext_bpf;
 #include "cache_ext_log_util.h"
 
 char *USAGE = "Usage: ./cache_ext_fifo --watch_dir <dir> --cgroup_size <size> --cgroup_path <path>\n";
-struct cmdline_args {
-	char *watch_dir;
-	char *cgroup_path;
-};
-
-static struct argp_option options[] = {
-	{ "watch_dir", 'w', "DIR", 0, "Directory to watch" },
-	{"cgroup_size", 's', "SIZE", 0, "Size of the cgroup"},
-	{ "cgroup_path", 'c', "PATH", 0, "Path to cgroup (e.g., /sys/fs/cgroup/cache_ext_test)" },
-	{ 0 },
-};
 
 static volatile sig_atomic_t exiting;
 
 static void sig_handler(int signo) {
 	exiting = 1;
-}
-
-static error_t parse_opt(int key, char *arg, struct argp_state *state)
-{
-	struct cmdline_args *args = state->input;
-	switch (key) {
-	case 'w':
-		args->watch_dir = arg;
-		break;
-	case 'c':
-		args->cgroup_path = arg;
-		break;
-	default:
-		return ARGP_ERR_UNKNOWN;
-	}
-	return 0;
-}
-
-static int parse_args(int argc, char **argv, struct cmdline_args *args) {
-	struct argp argp = { options, parse_opt, 0, 0 };
-	argp_parse(&argp, argc, argv, 0, 0, args);
-
-	if (args->watch_dir == NULL) {
-		fprintf(stderr, "Missing required argument: watch_dir\n");
-		return 1;
-	}
-
-	if (args->cgroup_path == NULL) {
-		fprintf(stderr, "Missing required argument: cgroup_path\n");
-		return 1;
-	}
-
-	return 0;
 }
 
 /*
