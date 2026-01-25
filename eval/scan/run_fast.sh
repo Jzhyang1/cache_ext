@@ -37,5 +37,14 @@ python3 "$BENCH_PATH/bench_scan.py" \
 	--iterations "$ITERATIONS" \
 	--scan-util-path "$SCANUTIL_PATH/linscansparse.out"
 
+# Baseline and cache_ext
+python3 "$BENCH_PATH/bench_scan.py" \
+	--cpu 1 \
+	--policy-loader "$POLICY_PATH/cache_ext_s3pfifo.out" \
+	--results-file "$RESULTS_PATH/scan_fast_results.json" \
+	--data-dir "$FILES_PATH" \
+	--iterations "$ITERATIONS" \
+	--scan-util-path "$SCANUTIL_PATH/linscansparse.out"
+
 sudo dmesg >> "scan_fast_dmesg.log" || true
 echo "SCAN benchmark completed. Results saved to $RESULTS_PATH."
