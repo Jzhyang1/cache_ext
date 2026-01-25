@@ -30,7 +30,6 @@ void BPF_STRUCT_OPS(lru_folio_accessed, struct folio *folio) {
 		return;
 
 	increment_access_counter();
-	__sync_fetch_and_add(&ucounter, 1);
 	// bpf_printk("lru_folio_accessed called on %x -> %d\n", folio, access_counter);
 }
 
