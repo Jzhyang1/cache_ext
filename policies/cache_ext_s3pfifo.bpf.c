@@ -80,7 +80,7 @@ static inline u64 hash_ghost_key(struct folio *folio) {
 	u64 offset = folio->index & (-ASSOC_GROUP);
 
 	// Simple XOR hash
-	return (address_space ^ offset) % MAX_GHOST_VALUE;
+	return address_space ^ offset;
 }
 
 /*
