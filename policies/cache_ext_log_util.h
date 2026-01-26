@@ -8,7 +8,6 @@ struct cmdline_args {
 	char *watch_dir;
 	uint64_t cgroup_size;
 	char *cgroup_path;
-    char *benchmark_name;
 };
 
 static struct argp_option options[] = {
@@ -19,6 +18,7 @@ static struct argp_option options[] = {
 	{ 0 },
 };
 
+static char *benchmark_name = NULL;
 static error_t parse_opt(int key, char *arg, struct argp_state *state)
 {
 	struct cmdline_args *args = state->input;
@@ -35,7 +35,7 @@ static error_t parse_opt(int key, char *arg, struct argp_state *state)
         args->cgroup_path = arg;
         break;
     case 'b':
-        args->benchmark_name = arg;
+        benchmark_name = arg;
         break;
 	default:
 		return ARGP_ERR_UNKNOWN;
@@ -59,10 +59,6 @@ static int parse_args(int argc, char **argv, struct cmdline_args *args) {
 		fprintf(stderr, "Missing required argument: cgroup_path\n");
 		return 1;
 	}
-    if (args->benchmark_name == NULL) {
-        fprintf(stderr, "Missing required argument: benchmark_name\n");
-        return 1;
-    }
 	return 0;
 }
 
@@ -86,7 +82,7 @@ static void print_cache_stats(cache_ext_bpf *skel) {
 	// we write to a file because printing gets messed up sometimes
 	FILE *fp = fopen("cache_stats.txt", "a");
 
-    fprintf(fp, "\nCache Statistics %s:%s\n", args->benchmark_name, FILENAME);
+    fprintf(fp, "\nCache Statistics %s:%s\n", benchmark_name, FILENAME);
     key = 0; // accesses
     if (bpf_map_lookup_elem(bpf_map__fd(skel->maps.cache_stats), &key, &value) == 0)
         fprintf(fp, "Accesses: %lu\n", value);
