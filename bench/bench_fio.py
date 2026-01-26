@@ -78,7 +78,10 @@ class FioBenchmark(BenchmarkFramework):
         if not os.path.exists(target_dir):
             os.mkdir(target_dir)
         self.cache_ext_policy = CacheExtPolicy(
-            DEFAULT_CACHE_EXT_CGROUP, self.args.policy_loader, target_dir
+            "fio_benchmark",
+            DEFAULT_CACHE_EXT_CGROUP, 
+            self.args.policy_loader, 
+            target_dir
         )
         if self.args.policy_loader:
             CLEANUP_TASKS.append(lambda: self.cache_ext_policy.stop())

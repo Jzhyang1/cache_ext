@@ -27,11 +27,12 @@ class CacheExtPolicy:
         """Set the cgroup path for the policy."""
         self.cgroup_path = f"/sys/fs/cgroup/{cgroup}"
 
-    def __init__(self, cgroup: str, loader_path: str, watch_dir: str):
+    def __init__(self, benchmark_name: str, cgroup: str, loader_path: str, watch_dir: str):
         self.set_cgroup(cgroup)
         self.loader_path = loader_path
         self.watch_dir = watch_dir
         self.has_started = False
+        self.benchmark_name = benchmark_name
         self._policy_thread = None
 
     def start(self, cgroup_size: int = 0):
@@ -46,6 +47,8 @@ class CacheExtPolicy:
             self.watch_dir,
             "--cgroup_path",
             self.cgroup_path,
+            "--benchmark_name",
+            self.benchmark_name,
         ]
 
         if cgroup_size:

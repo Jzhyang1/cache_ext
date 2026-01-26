@@ -111,7 +111,10 @@ class LevelDBBenchmark(BenchmarkFramework):
         if self.args.leveldb_temp_db is None:
             self.args.leveldb_temp_db = self.args.leveldb_db + "_temp"
         self.cache_ext_policy = CacheExtPolicy(
-            DEFAULT_CACHE_EXT_CGROUP, self.args.policy_loader, self.args.leveldb_temp_db
+            self.args.benchmark,
+            DEFAULT_CACHE_EXT_CGROUP, 
+            self.args.policy_loader, 
+            self.args.leveldb_temp_db
         )
         CLEANUP_TASKS.append(lambda: self.cache_ext_policy.stop())
 

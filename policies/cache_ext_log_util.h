@@ -8,12 +8,14 @@ struct cmdline_args {
 	char *watch_dir;
 	uint64_t cgroup_size;
 	char *cgroup_path;
+    char *benchmark_name;
 };
 
 static struct argp_option options[] = {
-	{ "watch_dir", 'w', "DIR", 0, "Directory to watch" },
+	{"watch_dir", 'w', "DIR", 0, "Directory to watch"},
 	{"cgroup_size", 's', "SIZE", 0, "Size of the cgroup"},
 	{"cgroup_path", 'c', "PATH", 0, "Path to cgroup (e.g., /sys/fs/cgroup/cache_ext_test)"},
+    {"benchmark_name", 'b', "NAME", 0, "Name of the benchmark"},
 	{ 0 },
 };
 
@@ -31,6 +33,9 @@ static error_t parse_opt(int key, char *arg, struct argp_state *state)
         break;
     case 'c':
         args->cgroup_path = arg;
+        break;
+    case 'b':
+        args->benchmark_name = arg;
         break;
 	default:
 		return ARGP_ERR_UNKNOWN;
@@ -54,6 +59,10 @@ static int parse_args(int argc, char **argv, struct cmdline_args *args) {
 		fprintf(stderr, "Missing required argument: cgroup_path\n");
 		return 1;
 	}
+    if (args->benchmark_name == NULL) {
+        fprintf(stderr, "Missing required argument: benchmark_name\n");
+        return 1;
+    }
 	return 0;
 }
 
@@ -77,7 +86,7 @@ static void print_cache_stats(cache_ext_bpf *skel) {
 	// we write to a file because printing gets messed up sometimes
 	FILE *fp = fopen("cache_stats.txt", "a");
 
-    fprintf(fp, "\nCache Statistics %s:\n", FILENAME);
+    fprintf(fp, "\nCache Statistics %s:%s\n", args->benchmark_name, FILENAME);
     key = 0; // accesses
     if (bpf_map_lookup_elem(bpf_map__fd(skel->maps.cache_stats), &key, &value) == 0)
         fprintf(fp, "Accesses: %lu\n", value);

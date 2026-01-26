@@ -211,10 +211,14 @@ class PerCgroupBenchmark(BenchmarkFramework):
             # TODO: set the watch dirs more precisely to avoid needing recursive
             # watch dir initialization.
             self.cache_ext_policy = CacheExtPolicy(
-                DEFAULT_CACHE_EXT_CGROUP, self.args.policy_loader, self.args.search_path
+                self.args.benchmark,
+                DEFAULT_CACHE_EXT_CGROUP, 
+                self.args.policy_loader, 
+                self.args.search_path
             )
 
             self.second_cache_ext_policy = CacheExtPolicy(
+                self.args.benchmark,
                 DEFAULT_CACHE_EXT_CGROUP,
                 self.args.second_policy_loader,
                 self.args.search_path,

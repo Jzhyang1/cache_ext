@@ -15,7 +15,10 @@ class FileSearchBenchmark(BenchmarkFramework):
     def __init__(self, benchresults_cls=BenchResults, cli_args=None):
         super().__init__("filesearch_benchmark", benchresults_cls, cli_args)
         self.cache_ext_policy = CacheExtPolicy(
-            DEFAULT_CACHE_EXT_CGROUP, self.args.policy_loader, self.args.data_dir
+            "filesearch_benchmark",
+            DEFAULT_CACHE_EXT_CGROUP, 
+            self.args.policy_loader, 
+            self.args.data_dir
         )
         CLEANUP_TASKS.append(lambda: self.cache_ext_policy.stop())
 
