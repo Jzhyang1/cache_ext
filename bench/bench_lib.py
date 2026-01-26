@@ -89,7 +89,7 @@ class CacheExtPolicy:
             msg = msg.replace("'", '"')
             run(["sudo", "sh", "-c", f"echo '{msg}' >> {err_path}"])
             # log the dmesg output
-            run(["sudo", "sh", "-c", f"dmesg >> {err_path}"])
+            run(["sudo", "sh", "-c", f"dmesg | grep cache_ext >> {err_path}"])
 
         out, err = self._policy_thread.communicate()
         out, err = out.decode("utf-8"), err.decode("utf-8")
