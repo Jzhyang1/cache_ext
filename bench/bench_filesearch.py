@@ -15,7 +15,6 @@ class FileSearchBenchmark(BenchmarkFramework):
     def __init__(self, benchresults_cls=BenchResults, cli_args=None):
         super().__init__("filesearch_benchmark", benchresults_cls, cli_args)
         self.cache_ext_policy = CacheExtPolicy(
-            self.args.benchmark,
             DEFAULT_CACHE_EXT_CGROUP, 
             self.args.policy_loader, 
             self.args.data_dir
@@ -35,14 +34,6 @@ class FileSearchBenchmark(BenchmarkFramework):
             required=True,
             help="Specify the path to the policy loader binary",
         )
-
-    def benchmark_cmd(self):
-        # Start the cache extension policy
-        self.cache_ext_policy.start()
-        # Run the benchmark
-        self.run_benchmark()
-        # Stop the cache extension policy
-        self.cache_ext_policy.stop()
 
     def generate_configs(self, configs: List[Dict]) -> List[Dict]:
         configs = add_config_option("passes", [10], configs)
@@ -71,7 +62,7 @@ class FileSearchBenchmark(BenchmarkFramework):
         disable_smt()
         if config["cgroup_name"] == DEFAULT_CACHE_EXT_CGROUP:
             recreate_cache_ext_cgroup(limit_in_bytes=config["cgroup_size"])
-            self.cache_ext_policy.start()
+            self.cache_ext_policy.start("filesearch_benchmark", cgroup_size=config["cgroup_size"])
         else:
             recreate_baseline_cgroup(limit_in_bytes=config["cgroup_size"])
         self.start_time = time()

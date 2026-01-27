@@ -211,14 +211,12 @@ class PerCgroupBenchmark(BenchmarkFramework):
             # TODO: set the watch dirs more precisely to avoid needing recursive
             # watch dir initialization.
             self.cache_ext_policy = CacheExtPolicy(
-                self.args.benchmark,
                 DEFAULT_CACHE_EXT_CGROUP, 
                 self.args.policy_loader, 
                 self.args.search_path
             )
 
             self.second_cache_ext_policy = CacheExtPolicy(
-                self.args.benchmark,
                 DEFAULT_CACHE_EXT_CGROUP,
                 self.args.second_policy_loader,
                 self.args.search_path,
@@ -303,6 +301,11 @@ class PerCgroupBenchmark(BenchmarkFramework):
         disable_swap()
         disable_smt()
 
+        assert (
+            self.cache_ext_policy is not None and 
+            self.second_cache_ext_policy is not None
+        )
+
         if config["cgroup_config"].cache_ext:
             if config["cgroup_config"].split_cgroups:
                 recreate_cache_ext_cgroup(
@@ -316,8 +319,8 @@ class PerCgroupBenchmark(BenchmarkFramework):
                 self.cache_ext_policy.set_cgroup(f"{DEFAULT_CACHE_EXT_CGROUP}_1")
                 self.second_cache_ext_policy.set_cgroup(f"{DEFAULT_CACHE_EXT_CGROUP}_2")
 
-                self.cache_ext_policy.start()
-                self.second_cache_ext_policy.start()
+                self.cache_ext_policy.start(config["benchmark"], cgroup_size=config["cgroup_config"].policy1_size)
+                self.second_cache_ext_policy.start(config["benchmark"], cgroup_size=config["cgroup_config"].policy2_size)
             else:
                 size = (
                     config["cgroup_config"].policy1_size
@@ -328,13 +331,13 @@ class PerCgroupBenchmark(BenchmarkFramework):
                         cgroup=f"{DEFAULT_CACHE_EXT_CGROUP}_1", limit_in_bytes=size
                     )
                     self.cache_ext_policy.set_cgroup(f"{DEFAULT_CACHE_EXT_CGROUP}_1")
-                    self.cache_ext_policy.start()
+                    self.cache_ext_policy.start(config["benchmark"], cgroup_size=size)
                 else:
                     recreate_cache_ext_cgroup(
                         cgroup=f"{DEFAULT_CACHE_EXT_CGROUP}_2", limit_in_bytes=size
                     )
                     self.second_cache_ext_policy.set_cgroup(f"{DEFAULT_CACHE_EXT_CGROUP}_2")
-                    self.second_cache_ext_policy.start()
+                    self.second_cache_ext_policy.start(config["benchmark"], cgroup_size=size)
         else:
             if config["cgroup_config"].split_cgroups:
                 recreate_baseline_cgroup(
@@ -403,6 +406,11 @@ class PerCgroupBenchmark(BenchmarkFramework):
         return cmd
 
     def after_benchmark(self, config):
+        assert (
+            self.cache_ext_policy is not None and 
+            self.second_cache_ext_policy is not None
+        )
+
         if config["cgroup_config"].cache_ext:
             if config["cgroup_config"].split_cgroups:
                 self.cache_ext_policy.stop()

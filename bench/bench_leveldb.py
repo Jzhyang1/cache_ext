@@ -111,7 +111,6 @@ class LevelDBBenchmark(BenchmarkFramework):
         if self.args.leveldb_temp_db is None:
             self.args.leveldb_temp_db = self.args.leveldb_db + "_temp"
         self.cache_ext_policy = CacheExtPolicy(
-            self.args.benchmark,
             DEFAULT_CACHE_EXT_CGROUP, 
             self.args.policy_loader, 
             self.args.leveldb_temp_db
@@ -203,7 +202,7 @@ class LevelDBBenchmark(BenchmarkFramework):
         disable_smt()
         if config["cgroup_name"] == DEFAULT_CACHE_EXT_CGROUP:
             recreate_cache_ext_cgroup(limit_in_bytes=config["cgroup_size"])
-            self.cache_ext_policy.start(cgroup_size=config["cgroup_size"])
+            self.cache_ext_policy.start(config["benchmark"], cgroup_size=config["cgroup_size"])
         else:
             recreate_baseline_cgroup(limit_in_bytes=config["cgroup_size"])
 

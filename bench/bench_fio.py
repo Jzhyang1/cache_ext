@@ -78,7 +78,6 @@ class FioBenchmark(BenchmarkFramework):
         if not os.path.exists(target_dir):
             os.mkdir(target_dir)
         self.cache_ext_policy = CacheExtPolicy(
-            "fio_benchmark",
             DEFAULT_CACHE_EXT_CGROUP, 
             self.args.policy_loader, 
             target_dir
@@ -137,7 +136,7 @@ class FioBenchmark(BenchmarkFramework):
         )
         if config["cgroup_name"] == DEFAULT_CACHE_EXT_CGROUP:
             recreate_cache_ext_cgroup(limit_in_bytes=config["cgroup_size"])
-            self.cache_ext_policy.start(cgroup_size=config["cgroup_size"])
+            self.cache_ext_policy.start("fio_benchmark", cgroup_size=config["cgroup_size"])
         else:
             recreate_baseline_cgroup(limit_in_bytes=config["cgroup_size"])
 
