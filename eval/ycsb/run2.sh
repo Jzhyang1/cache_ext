@@ -19,7 +19,14 @@ RESULTS_PATH="$BASE_DIR/results"
 ITERATIONS=3
 
 POLICIES=(
+	"cache_ext_fifo"
 	"cache_ext_lru"
+	"cache_ext_s3pfifo"
+	"cache_ext_mru"
+	"cache_ext_mglru"
+	"cache_ext_sampling"
+	"cache_ext_lhd"
+	"cache_ext_s3fifo"
 )
 
 mkdir -p "$RESULTS_PATH"
@@ -38,10 +45,10 @@ if ! "$BASE_DIR/utils/disable-mglru.sh"; then
 	exit 1
 fi
 
-# Baseline and cache_ext
-for POLICY in "${POLICIES[@]}"; do
-	echo "Running policy: ${POLICY}"
-	python3 "$BENCH_PATH/bench_leveldb.py" \
+python3 "$BENCH_PATH/run_policies.py" \
+	--policy-path "$POLICY_PATH" \
+	--policies "${POLICIES[*]}" \
+	--bench-file "$BENCH_PATH/bench_leveldb.py" \
 		--cpu 8 \
 		--policy-loader "$POLICY_PATH/${POLICY}.out" \
 		--results-file "$RESULTS_PATH/ycsb_results.json" \
@@ -50,6 +57,11 @@ for POLICY in "${POLICIES[@]}"; do
 		--iterations "$ITERATIONS" \
 		--bench-binary-dir "$YCSB_PATH/build" \
 		--benchmark ycsb_a,ycsb_b,ycsb_c,ycsb_d,ycsb_e,ycsb_f,uniform,uniform_read_write
-done
+
+# Enable MGLRU
+if ! "$BASE_DIR/utils/enable-mglru.sh"; then
+	echo "Failed to enable MGLRU. Please check the script."
+	exit 1
+fi
 
 echo "YCSB benchmark completed. Results saved to $RESULTS_PATH."
