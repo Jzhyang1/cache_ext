@@ -50,7 +50,6 @@ python3 "$BENCH_PATH/run_policies.py" \
 	--policies "${POLICIES[*]}" \
 	--bench-file "$BENCH_PATH/bench_leveldb.py" \
 		--cpu 8 \
-		--policy-loader "$POLICY_PATH/${POLICY}.out" \
 		--results-file "$RESULTS_PATH/ycsb_results.json" \
 		--leveldb-db "$DB_PATH" \
 		--fadvise-hints "" \
