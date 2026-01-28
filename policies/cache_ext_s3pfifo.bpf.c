@@ -51,6 +51,7 @@ struct {
 	__uint(type, BPF_MAP_TYPE_LRU_HASH);
 	__type(key, struct ghost_entry);
 	__type(value, u8);	// active/inactive state
+	__uint(max_entries, 4000000);
 	__uint(map_flags, BPF_F_NO_COMMON_LRU);  // Per-CPU LRU eviction logic
 } ghost_map SEC(".maps");
 
@@ -223,7 +224,9 @@ void BPF_STRUCT_OPS(s3pfifo_evict_folios, struct cache_ext_eviction_ctx *evictio
 	// when small list has folios to move to main list,
 	// add those to main list and then evict from main list if needed.
 	evict_small(eviction_ctx, memcg);
-	if (main_list_size > 12 * small_list_size) {
+	s64 over_cap = main_list_size - 8 * small_list_size;
+	if (over_cap > 0) {
+		eviction_ctx->nr_folios_to_evict = over_cap;
 		evict_main(eviction_ctx, memcg);
 	}
 }
