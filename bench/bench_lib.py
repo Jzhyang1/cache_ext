@@ -63,9 +63,11 @@ class CacheExtPolicy:
         # This is a workaround to fix it.
         # run(["stty", "sane"])
         if self._policy_thread.poll() is not None:
+            stderr = self._policy_thread.stderr
+            message = stderr.read().decode("utf-8") if stderr else "could not read stderr"
             raise Exception(
                 "Policy thread exited unexpectedly: %s"
-                % self._policy_thread.stderr.read().decode("utf-8")
+                % message
             )
 
     def stop(self):
@@ -91,7 +93,9 @@ class CacheExtPolicy:
             msg = msg.replace("'", '"')
             run(["sudo", "sh", "-c", f"echo '{msg}' >> {err_path}"])
             # log the dmesg output
-            run(["sudo", "sh", "-c", f"dmesg | grep cache_ext >> {err_path}"])
+            run(["sudo", "sh", "-c", f"dmesg | grep cache_ext | tail -n 100 >> {err_path}"])
+            # log the log output (needs timeout because it hangs)
+            run(["sudo", "sh", "-c", "timeout", "5", f"tail -n 100 /data/cache_ext/trace_pipe >> {err_path}"])
 
         out, err = self._policy_thread.communicate()
         out, err = out.decode("utf-8"), err.decode("utf-8")
@@ -171,6 +175,8 @@ def run_command_with_live_output(command, **kwargs):
     popen_kwargs.update(kwargs)
 
     process = subprocess.Popen(command, **popen_kwargs)
+    assert process.stdout is not None
+    assert process.stderr is not None
 
     stdout_output = []
     stderr_output = []
@@ -428,7 +434,7 @@ def unique_configs_for_keys(configs: List[Dict], keys: List[str]) -> List[Dict]:
     return unique_configs
 
 
-def checkpoint_results(results_file: str, results: BenchRun):
+def checkpoint_results(results_file: str, results: BenchRun | List[BenchRun]):
     temp_results_file = results_file + ".tmp"
     with open(temp_results_file, "w") as f:
         f.write(json.dumps(results, cls=ToJSONEncoder, indent=4))
