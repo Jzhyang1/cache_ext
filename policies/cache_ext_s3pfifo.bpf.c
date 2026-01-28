@@ -86,18 +86,6 @@ static inline struct ghost_entry hash_ghost_key(struct folio *folio) {
 	return key;
 }
 
-/*
- * Gets an entry from the ghost list
- * returns 255 if not found (to keep in cache if get fails)
- */
-static inline u8 get_folio_ghost(struct folio *folio) {
-	struct ghost_entry hash = hash_ghost_key(folio);
-	u8 *state = bpf_map_lookup_elem(&ghost_map, &hash);
-	if (state == NULL) {
-		return 255;
-	}
-	return *state;
-}
 // returns 255 if not found (to keep in cache if get fails)
 static inline u8 get_folio_ghost_decr(struct folio *folio) {
 	struct ghost_entry hash = hash_ghost_key(folio);
@@ -226,7 +214,7 @@ void BPF_STRUCT_OPS(s3pfifo_evict_folios, struct cache_ext_eviction_ctx *evictio
 	evict_small(eviction_ctx, memcg);
 	s64 over_cap = main_list_size - 8 * small_list_size;
 	if (over_cap > 0) {
-		eviction_ctx->nr_folios_to_evict = over_cap;
+		eviction_ctx->request_nr_folios_to_evict = over_cap;
 		evict_main(eviction_ctx, memcg);
 	}
 }
