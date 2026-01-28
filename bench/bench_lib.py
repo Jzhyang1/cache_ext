@@ -95,7 +95,8 @@ class CacheExtPolicy:
             # log the dmesg output
             run(["sudo", "sh", "-c", f"dmesg | grep cache_ext | tail -n 100 >> {err_path}"])
             # log the log output (needs timeout because it hangs)
-            run(["sudo", "sh", "-c", "timeout", "5", f"tail -n 100 /data/cache_ext/trace_pipe >> {err_path}"])
+            # TODO for some reason using "sh" makes timeout not work
+            run(["sudo", "timeout", "5", f"tail -n 100 /data/cache_ext/trace_pipe >> {err_path}"])
 
         out, err = self._policy_thread.communicate()
         out, err = out.decode("utf-8"), err.decode("utf-8")
