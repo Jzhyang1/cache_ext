@@ -65,7 +65,7 @@ void BPF_STRUCT_OPS(mru_folio_added, struct folio *folio)
 	dbg_printk("cache_ext: Added folio to mru_list\n");
 }
 
-void BPF_STRUCT_OPS(mru_folio_accessed, struct folio *folio)
+void BPF_STRUCT_OPS(mru_folio_accessed, struct folio *folio, bool *prefetch)
 {
 	int ret;
 	dbg_printk("cache_ext: Hi from the mru_folio_accessed hook! :D\n");

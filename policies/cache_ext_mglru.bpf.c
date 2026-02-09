@@ -879,7 +879,7 @@ void BPF_STRUCT_OPS(mglru_folio_added, struct folio *folio)
 	lru_gen_add_folio(folio);
 }
 
-void BPF_STRUCT_OPS(mglru_folio_accessed, struct folio *folio)
+void BPF_STRUCT_OPS(mglru_folio_accessed, struct folio *folio, bool *prefetch)
 {
 	if (!is_folio_relevant(folio)) {
 		return;
