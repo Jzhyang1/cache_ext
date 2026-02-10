@@ -1,5 +1,5 @@
 #!/bin/bash
-# File search run script (Figure 9)
+# GET-SCAN run script (Figure 8)
 set -eu -o pipefail
 
 if ! uname -r | grep -q "cache-ext"; then
@@ -11,14 +11,13 @@ fi
 SCRIPT_PATH=$(realpath $0)
 BASE_DIR=$(realpath "$(dirname $SCRIPT_PATH)/../../")
 BENCH_PATH="$BASE_DIR/bench"
-FIO_DIR=$(realpath "$BASE_DIR/../fio_dir")
-RESULTS_PATH="$BASE_DIR/results"
 POLICY_PATH="$BASE_DIR/policies"
-
+SCANUTIL_PATH="$BASE_DIR/ScanUtil"
+FILES_PATH=$(realpath "$BASE_DIR/../linux")
+RESULTS_PATH="$BASE_DIR/results"
 
 ITERATIONS=1
 
-mkdir -p "$FIO_DIR"
 mkdir -p "$RESULTS_PATH"
 
 # Disable MGLRU
@@ -27,12 +26,13 @@ if ! "$BASE_DIR/utils/disable-mglru.sh"; then
 	exit 1
 fi
 
-# Microbenchmark with fio for CPU overhead
-python3 "$BENCH_PATH/bench_fio.py" \
-	--cpu 8 \
-	--target-dir "$FIO_DIR" \
-	--policy-loader "$POLICY_PATH/cache_ext_prefetch_overhead.out" \
+# Baseline and cache_ext
+python3 "$BENCH_PATH/bench_scan.py" \
+	--cpu 1 \
+	--policy-loader "$POLICY_PATH/cache_ext_prefetch.out" \
+	--results-file "$RESULTS_PATH/prefetch_results.json" \
+	--data-dir "$FILES_PATH" \
 	--iterations "$ITERATIONS" \
-	--results-file "$RESULTS_PATH/prefetch_overhead_results.json"
+	--scan-util-path "$SCANUTIL_PATH/linscansparse.out"
 
-echo "CPU overhead benchmark completed. Results saved to $RESULTS_PATH."
+echo "SCAN benchmark completed. Results saved to $RESULTS_PATH."
