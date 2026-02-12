@@ -10,7 +10,7 @@
 #include <unistd.h>
 
 #include "dir_watcher.h"
-#include "cache_ext_pf.skel.h"
+#include "cache_ext_prefetch.skel.h"
 
 char *USAGE = "Usage: ./cache_ext_pf --watch_dir <dir> --cgroup_path <path>\n";
 
