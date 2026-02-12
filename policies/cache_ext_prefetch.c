@@ -11,6 +11,10 @@
 
 #include "dir_watcher.h"
 #include "cache_ext_prefetch.skel.h"
+const char *FILENAME = __FILE__;
+typedef struct cache_ext_prefetch_bpf cache_ext_bpf;
+#include "cache_ext_log_util.h"
+
 
 char *USAGE = "Usage: ./cache_ext_prefetch --watch_dir <dir> --cgroup_path <path>\n";
 
@@ -67,14 +71,19 @@ static int handle_event(void *ctx, void *data, size_t data_sz) {
 		printf("Prefetch request: address_space=%llu, index=%llu, nr_pages=%llu\n",
 			event->user_address_space, event->index, event->nr_pages);
 		// Also for debugging, send the next index as a userspace_event request for a prefetch
-		
+
 		int fd = *(int *)ctx;
 		struct userspace_event next_event = {
 			.user_address_space = event->user_address_space,
 			.index = event->index + 1,	// this is just for testing purposes
 			.nr_pages = 1,
 		};
-		int err = bpf_prog_test_run_opts(fd, NULL, &next_event, sizeof(next_event));
+		struct bpf_test_run_opts opts = {
+			.sz = sizeof(opts),
+			.ctx_in = &next_event,
+			.ctx_size_in = sizeof(next_event),
+		};
+		int err = bpf_prog_test_run_opts(fd, NULL, &opts);
 		if (err) {
 			perror("Failed to run pf_prefetch_folios program");
 			return 0;
