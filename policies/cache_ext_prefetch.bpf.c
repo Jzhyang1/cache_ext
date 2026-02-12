@@ -175,5 +175,4 @@ struct cache_ext_ops pf_ops = {
 	.folio_evicted = (void *)pf_folio_evicted,
 	.folio_added = (void *)pf_folio_added,
 	.folio_accessed = (void *)pf_folio_accessed,
-	.prefetch_folios = (void *)pf_prefetch_folios,
 };
