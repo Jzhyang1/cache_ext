@@ -321,7 +321,7 @@ static s64 bpf_lhd_score_fn(struct cache_ext_list_node *a) {
 	return get_hit_density(data);
 }
 
-void BPF_STRUCT_OPS(lhd_evict_folios, struct cache_ext_eviction_ctx *eviction_ctx,
+void BPF_STRUCT_OPS(lhd_evict_folios, struct page_cache_ext_eviction_ctx *eviction_ctx,
 	       struct mem_cgroup *memcg)
 {
 	struct sampling_options opts = {
@@ -498,7 +498,7 @@ void BPF_STRUCT_OPS(lhd_folio_added, struct folio *folio) {
 }
 
 SEC(".struct_ops.link")
-struct cache_ext_ops lhd_ops = {
+struct page_cache_ext_ops lhd_ops = {
 	.init = (void *)lhd_init,
 	.evict_folios = (void *)lhd_evict_folios,
 	.folio_accessed = (void *)lhd_folio_accessed,

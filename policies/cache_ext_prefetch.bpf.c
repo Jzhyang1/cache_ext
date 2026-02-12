@@ -116,7 +116,7 @@ static int bpf_pf_evict_cb(int idx, struct cache_ext_list_node *a)
 	return CACHE_EXT_EVICT_NODE;
 }
 
-void BPF_STRUCT_OPS(pf_evict_folios, struct cache_ext_eviction_ctx *eviction_ctx,
+void BPF_STRUCT_OPS(pf_evict_folios, struct page_cache_ext_eviction_ctx *eviction_ctx,
 		    struct mem_cgroup *memcg)
 {
 	if (bpf_cache_ext_list_iterate(memcg, main_list, bpf_pf_evict_cb, eviction_ctx) < 0) {
@@ -169,7 +169,7 @@ void BPF_STRUCT_OPS(pf_folio_added, struct folio *folio) {
 }
 
 SEC(".struct_ops.link")
-struct cache_ext_ops pf_ops = {
+struct page_cache_ext_ops pf_ops = {
 	.init = (void *)pf_init,
 	.evict_folios = (void *)pf_evict_folios,
 	.folio_evicted = (void *)pf_folio_evicted,
