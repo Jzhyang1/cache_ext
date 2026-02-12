@@ -67,12 +67,8 @@ static int handle_event(void *ctx, void *data, size_t data_sz) {
 		printf("Prefetch request: address_space=%llu, index=%llu, nr_pages=%llu\n",
 			event->user_address_space, event->index, event->nr_pages);
 		// Also for debugging, send the next index as a userspace_event request for a prefetch
-
-    	int fd = bpf_program__fd(skel->progs.pf_prefetch_folios);
-		if (fd < 0) {
-			perror("Failed to get fd of pf_prefetch_folios program");
-			return 0;
-		}
+		
+		int fd = *(int *)ctx;
 		struct userspace_event next_event = {
 			.user_address_space = event->user_address_space,
 			.index = event->index + 1,	// this is just for testing purposes
@@ -140,9 +136,9 @@ int main(int argc, char **argv) {
 	}
 
 	// Get fd of reconfigure program
-	int reconfigure_prog_fd = bpf_program__fd(skel->progs.reconfigure);
+	int prefetch_prog_fd = bpf_program__fd(skel->progs.pf_prefetch_folios);
 
-	struct ring_buffer *events = ring_buffer__new(bpf_map__fd(skel->maps.userspace_events), handle_event, &reconfigure_prog_fd, NULL);
+	struct ring_buffer *events = ring_buffer__new(bpf_map__fd(skel->maps.userspace_events), handle_event, &prefetch_prog_fd, NULL);
 	if (!events) {
 		perror("Failed to create ring buffer");
 		goto cleanup;
