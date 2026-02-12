@@ -83,7 +83,7 @@ static int handle_event(void *ctx, void *data, size_t data_sz) {
 			.ctx_in = &next_event,
 			.ctx_size_in = sizeof(next_event),
 		};
-		int err = bpf_prog_test_run_opts(fd, NULL, &opts);
+		int err = bpf_prog_test_run_opts(fd, &opts);
 		if (err) {
 			perror("Failed to run pf_prefetch_folios program");
 			return 0;
