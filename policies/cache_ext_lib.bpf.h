@@ -76,6 +76,9 @@ static __always_inline void __write_once_size(volatile void *p, void *res, int s
 
 // cache_ext BPF API
 
+#define FOLIO_PF_ANY		0
+#define pgoff_t unsigned long
+
 int bpf_cache_ext_list_add(u64 list, struct folio *folio) __ksym;
 int bpf_cache_ext_list_add_tail(u64 list, struct folio *folio) __ksym;
 int bpf_cache_ext_list_del(struct folio *folio) __ksym;
@@ -108,9 +111,6 @@ int bpf_cache_ext_prefetch(struct address_space *mapping, pgoff_t index, unsigne
 
 #define test_bit(nr, addr)		bitop(_test_bit, nr, addr)
 #define _test_bit
-
-#define FOLIO_PF_ANY		0
-#define pgoff_t unsigned long
 
 
 static __always_inline bool
