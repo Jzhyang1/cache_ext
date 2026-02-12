@@ -15,7 +15,7 @@ char _license[] SEC("license") = "GPL";
  ***********************************************************/
 
 struct address_space_wrapper {
-	struct address_space __kptr __kptr_ref *mapping;
+	struct address_space __kptr_ref *mapping;
 };
 
 struct {
