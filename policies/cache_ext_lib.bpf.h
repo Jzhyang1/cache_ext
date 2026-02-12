@@ -93,6 +93,8 @@ int bpf_cache_ext_list_sample(struct mem_cgroup *memcg, u64 list,
 			      struct cache_ext_eviction_ctx *ctx) __ksym;
 u64 bpf_cache_ext_ds_registry_new_list(struct mem_cgroup *memcg) __ksym;
 
+int bpf_cache_ext_prefetch(struct address_space *mapping, pgoff_t index, unsigned long nr_pages) __ksym;
+
 #define BITS_PER_LONG 64
 #define BIT_MASK(nr)		(UL(1) << ((nr) % BITS_PER_LONG))
 #define BIT_WORD(nr)		((nr) / BITS_PER_LONG)

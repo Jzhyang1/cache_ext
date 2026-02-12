@@ -368,7 +368,7 @@ void BPF_STRUCT_OPS(lhd_evict_folios, struct cache_ext_eviction_ctx *eviction_ct
 	}*/
 }
 
-void BPF_STRUCT_OPS(lhd_folio_accessed, struct folio *folio, bool *prefetch) {
+void BPF_STRUCT_OPS(lhd_folio_accessed, struct folio *folio) {
 	if (!is_folio_relevant(folio))
 		return;
 	increment_access_counter();

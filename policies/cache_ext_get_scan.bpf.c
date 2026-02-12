@@ -209,7 +209,7 @@ void BPF_STRUCT_OPS(mixed_folio_added, struct folio *folio)
 	bpf_map_update_elem(&folio_metadata_map, &key, &new_meta, BPF_ANY);
 }
 
-void BPF_STRUCT_OPS(mixed_folio_accessed, struct folio *folio, bool *prefetch)
+void BPF_STRUCT_OPS(mixed_folio_accessed, struct folio *folio)
 {
 	if (!is_folio_relevant(folio)) {
 		return;

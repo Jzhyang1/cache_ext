@@ -282,7 +282,7 @@ void BPF_STRUCT_OPS(s3fifo_evict_folios, struct cache_ext_eviction_ctx *eviction
 		evict_main_iter(eviction_ctx, memcg);
 }
 
-void BPF_STRUCT_OPS(s3fifo_folio_accessed, struct folio *folio, bool *prefetch) {
+void BPF_STRUCT_OPS(s3fifo_folio_accessed, struct folio *folio) {
 	if (!is_folio_relevant(folio))
 		return;
 	increment_access_counter();

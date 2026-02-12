@@ -13,54 +13,11 @@
 #include "cache_ext_pf.skel.h"
 
 char *USAGE = "Usage: ./cache_ext_pf --watch_dir <dir> --cgroup_path <path>\n";
-struct cmdline_args {
-	char *watch_dir;
-	char *cgroup_path;
-};
-
-static struct argp_option options[] = {
-	{ "watch_dir", 'w', "DIR", 0, "Directory to watch" },
-	{ "cgroup_path", 'c', "PATH", 0, "Path to cgroup (e.g., /sys/fs/cgroup/cache_ext_test)" },
-	{ 0 },
-};
 
 static volatile sig_atomic_t exiting;
 
 static void sig_handler(int signo) {
 	exiting = 1;
-}
-
-static error_t parse_opt(int key, char *arg, struct argp_state *state)
-{
-	struct cmdline_args *args = state->input;
-	switch (key) {
-	case 'w':
-		args->watch_dir = arg;
-		break;
-	case 'c':
-		args->cgroup_path = arg;
-		break;
-	default:
-		return ARGP_ERR_UNKNOWN;
-	}
-	return 0;
-}
-
-static int parse_args(int argc, char **argv, struct cmdline_args *args) {
-	struct argp argp = { options, parse_opt, 0, 0 };
-	argp_parse(&argp, argc, argv, 0, 0, args);
-
-	if (args->watch_dir == NULL) {
-		fprintf(stderr, "Missing required argument: watch_dir\n");
-		return 1;
-	}
-
-	if (args->cgroup_path == NULL) {
-		fprintf(stderr, "Missing required argument: cgroup_path\n");
-		return 1;
-	}
-
-	return 0;
 }
 
 /*
@@ -87,6 +44,46 @@ static int validate_watch_dir(const char *watch_dir, char *watch_dir_full_path) 
 		return 1;
 	}
 
+	return 0;
+}
+
+/***********************************************************
+ * Userspace handling for prefetch requests
+ ***********************************************************/
+
+struct userspace_event {
+	uint64_t user_address_space;	// this is the value in inverse_mapping_registry that userspace sends to identify the address_space
+	uint64_t index;	// page offset in file
+	uint64_t nr_pages;	// number of pages to prefetch
+};
+
+static uint64_t nr_events = 0;
+static int handle_event(void *ctx, void *data, size_t data_sz) {
+	++nr_events;
+
+	struct userspace_event *event = (struct userspace_event *)data;
+	// Print prefetch info every 1000 events for debugging
+	if (nr_events % 1000 == 0) {
+		printf("Prefetch request: address_space=%llu, index=%llu, nr_pages=%llu\n",
+			event->user_address_space, event->index, event->nr_pages);
+		// Also for debugging, send the next index as a userspace_event request for a prefetch
+
+    	int fd = bpf_program__fd(skel->progs.pf_prefetch_folios);
+		if (fd < 0) {
+			perror("Failed to get fd of pf_prefetch_folios program");
+			return 0;
+		}
+		struct userspace_event next_event = {
+			.user_address_space = event->user_address_space,
+			.index = event->index + 1,	// this is just for testing purposes
+			.nr_pages = 1,
+		};
+		int err = bpf_prog_test_run_opts(fd, NULL, &next_event, sizeof(next_event));
+		if (err) {
+			perror("Failed to run pf_prefetch_folios program");
+			return 0;
+		}
+	}
 	return 0;
 }
 
@@ -139,6 +136,15 @@ int main(int argc, char **argv) {
 
 	if (initialize_watch_dir_map(watch_dir_path, bpf_map__fd(inode_watchlist_map(skel)), true)) {
 		perror("Failed to initialize watch_dir map");
+		goto cleanup;
+	}
+
+	// Get fd of reconfigure program
+	int reconfigure_prog_fd = bpf_program__fd(skel->progs.reconfigure);
+
+	struct ring_buffer *events = ring_buffer__new(bpf_map__fd(skel->maps.userspace_events), handle_event, &reconfigure_prog_fd, NULL);
+	if (!events) {
+		perror("Failed to create ring buffer");
 		goto cleanup;
 	}
 
