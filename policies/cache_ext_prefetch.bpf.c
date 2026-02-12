@@ -13,9 +13,15 @@ char _license[] SEC("license") = "GPL";
  * We go from eBPF (folio_accessed) -> userspace (listens to ring buffer) 
  * 	-> eBPF (prefetch_folios) -> kernel (prefetch)
  ***********************************************************/
+#ifndef __kptr
+#define __kptr __attribute__((btf_type_tag("kptr")))
+#endif
+#ifndef __kptr_ref
+#define __kptr_ref __attribute__((btf_type_tag("kptr_ref")))
+#endif
 
 struct address_space_wrapper {
-	struct address_space __kptr_ref *mapping;
+	struct address_space __kptr __kptr_ref *mapping;
 };
 
 struct {
