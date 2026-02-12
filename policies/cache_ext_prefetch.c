@@ -12,7 +12,7 @@
 #include "dir_watcher.h"
 #include "cache_ext_prefetch.skel.h"
 
-char *USAGE = "Usage: ./cache_ext_pf --watch_dir <dir> --cgroup_path <path>\n";
+char *USAGE = "Usage: ./cache_ext_prefetch --watch_dir <dir> --cgroup_path <path>\n";
 
 static volatile sig_atomic_t exiting;
 
@@ -89,7 +89,7 @@ static int handle_event(void *ctx, void *data, size_t data_sz) {
 
 int main(int argc, char **argv) {
 	struct cmdline_args args = { 0 };
-	struct cache_ext_pf_bpf *skel = NULL;
+	struct cache_ext_prefetch_bpf *skel = NULL;
 	struct bpf_link *link = NULL;
 	struct sigaction sa;
 	char watch_dir_path[PATH_MAX];
@@ -120,7 +120,7 @@ int main(int argc, char **argv) {
 		return 1;
 	}
 
-	skel = cache_ext_pf_bpf__open();
+	skel = cache_ext_prefetch_bpf__open();
 	if (!skel) {
 		perror("Failed to open BPF skeleton");
 		goto cleanup;
@@ -129,7 +129,7 @@ int main(int argc, char **argv) {
 	watch_dir_path_len_map(skel) = strlen(watch_dir_path);
 	strcpy(watch_dir_path_map(skel), watch_dir_path);
 
-	if (cache_ext_pf_bpf__load(skel)) {
+	if (cache_ext_prefetch_bpf__load(skel)) {
 		perror("Failed to load BPF skeleton");
 		goto cleanup;
 	}
@@ -155,7 +155,7 @@ int main(int argc, char **argv) {
 	}
 
 	// This is necessary for the dir_watcher functionality
-	if (cache_ext_pf_bpf__attach(skel)) {
+	if (cache_ext_prefetch_bpf__attach(skel)) {
 		perror("Failed to attach BPF skeleton");
 		goto cleanup;
 	}
@@ -168,6 +168,6 @@ int main(int argc, char **argv) {
 cleanup:
 	close(cgroup_fd);
 	bpf_link__destroy(link);
-	cache_ext_pf_bpf__destroy(skel);
+	cache_ext_prefetch_bpf__destroy(skel);
 	return ret;
 }
