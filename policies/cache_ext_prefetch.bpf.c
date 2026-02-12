@@ -135,7 +135,7 @@ void BPF_STRUCT_OPS(pf_folio_accessed, struct folio *folio) {
 	if (!wrapper) {
 		// add it and and possibly evict an old one
 		struct address_space_wrapper wrapper = {
-			.mapping = bpf_mapping_acquire(folio->mapping),
+			.mapping = bpf_cache_ext_mapping_acquire(folio->mapping),
 		};
 		if (bpf_map_update_elem(&inverse_mapping_registry, &address_space_key, &wrapper, BPF_ANY)) {
 			bpf_printk("cache_ext: access: Failed to update inverse mapping registry\n");
