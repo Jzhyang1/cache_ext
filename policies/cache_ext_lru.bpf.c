@@ -20,7 +20,7 @@ s32 BPF_STRUCT_OPS_SLEEPABLE(lru_init, struct mem_cgroup *memcg) {
 	return 0;
 }
 
-void BPF_STRUCT_OPS(lru_evict_folios, struct page_cache_ext_eviction_ctx *eviction_ctx,
+void BPF_STRUCT_OPS(lru_evict_folios, struct cache_ext_eviction_ctx *eviction_ctx,
 		    struct mem_cgroup *memcg) {
 	return;
 }
@@ -51,7 +51,7 @@ void BPF_STRUCT_OPS(lru_folio_added, struct folio *folio) {
 }
 
 SEC(".struct_ops.link")
-struct page_cache_ext_ops lru_ops = {
+struct cache_ext_ops lru_ops = {
 	.init = (void *)lru_init,
 	.evict_folios = (void *)lru_evict_folios,
 	.folio_accessed = (void *)lru_folio_accessed,

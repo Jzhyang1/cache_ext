@@ -339,7 +339,7 @@ static s64 bpf_lfu_score_fn(struct cache_ext_list_node *a)
 }
 
 void BPF_STRUCT_OPS(mixed_evict_folios,
-		    struct page_cache_ext_eviction_ctx *eviction_ctx,
+		    struct cache_ext_eviction_ctx *eviction_ctx,
 		    struct mem_cgroup *memcg)
 {
 	int sampling_rate = 5;
@@ -383,7 +383,7 @@ void BPF_STRUCT_OPS(mixed_evict_folios,
 }
 
 SEC(".struct_ops.link")
-struct page_cache_ext_ops sampling_ops = {
+struct cache_ext_ops sampling_ops = {
 	.init = (void *)mixed_init,
 	.evict_folios = (void *)mixed_evict_folios,
 	.folio_accessed = (void *)mixed_folio_accessed,

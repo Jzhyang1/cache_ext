@@ -155,7 +155,7 @@ static int bpf_s3pfifo_score_small_fn(int idx, struct cache_ext_list_node *a)
 	return CACHE_EXT_CONTINUE_ITER;
 }
 
-static void evict_main(struct page_cache_ext_eviction_ctx *eviction_ctx, struct mem_cgroup *memcg)
+static void evict_main(struct cache_ext_eviction_ctx *eviction_ctx, struct mem_cgroup *memcg)
 {
 	/*
 	 * Iterate from head. If freq > 0, move to tail, freq--.
@@ -176,7 +176,7 @@ static void evict_main(struct page_cache_ext_eviction_ctx *eviction_ctx, struct 
 		main_list_size = 0;
 }
 
-static void evict_small(struct page_cache_ext_eviction_ctx *eviction_ctx, struct mem_cgroup *memcg)
+static void evict_small(struct cache_ext_eviction_ctx *eviction_ctx, struct mem_cgroup *memcg)
 {
 	/*
 	 * Iterate from head. If freq > 1, move to main list, otherwise evict.
@@ -205,7 +205,7 @@ static void evict_small(struct page_cache_ext_eviction_ctx *eviction_ctx, struct
 		main_list_size = opts.nr_folios_continue;
 }
 
-void BPF_STRUCT_OPS(s3pfifo_evict_folios, struct page_cache_ext_eviction_ctx *eviction_ctx,
+void BPF_STRUCT_OPS(s3pfifo_evict_folios, struct cache_ext_eviction_ctx *eviction_ctx,
 		    struct mem_cgroup *memcg)
 {
 	// search small list first.
@@ -260,7 +260,7 @@ void BPF_STRUCT_OPS(s3pfifo_folio_added, struct folio *folio) {
 }
 
 SEC(".struct_ops.link")
-struct page_cache_ext_ops s3pfifo_ops = {
+struct cache_ext_ops s3pfifo_ops = {
 	.init = (void *)s3pfifo_init,
 	.evict_folios = (void *)s3pfifo_evict_folios,
 	.folio_accessed = (void *)s3pfifo_folio_accessed,

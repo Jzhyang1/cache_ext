@@ -778,7 +778,7 @@ static int mglru_iter_fn(int idx, struct cache_ext_list_node *a)
 	return CACHE_EXT_EVICT_NODE;
 }
 
-void BPF_STRUCT_OPS(mglru_evict_folios, struct page_cache_ext_eviction_ctx *eviction_ctx,
+void BPF_STRUCT_OPS(mglru_evict_folios, struct cache_ext_eviction_ctx *eviction_ctx,
 		    struct mem_cgroup *memcg)
 {
 	DEFINE_LRUGEN_void;
@@ -917,7 +917,7 @@ void BPF_STRUCT_OPS(mglru_folio_evicted, struct folio *folio)
 }
 
 SEC(".struct_ops.link")
-struct page_cache_ext_ops mglru_ops = {
+struct cache_ext_ops mglru_ops = {
 	.init = (void *)mglru_init,
 	.evict_folios = (void *)mglru_evict_folios,
 	.folio_accessed = (void *)mglru_folio_accessed,

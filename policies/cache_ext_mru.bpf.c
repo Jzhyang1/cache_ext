@@ -99,7 +99,7 @@ static int iterate_mru(int idx, struct cache_ext_list_node *node)
 	return CACHE_EXT_EVICT_NODE;
 }
 
-void BPF_STRUCT_OPS(mru_evict_folios, struct page_cache_ext_eviction_ctx *eviction_ctx,
+void BPF_STRUCT_OPS(mru_evict_folios, struct cache_ext_eviction_ctx *eviction_ctx,
 	       struct mem_cgroup *memcg)
 {
 	dbg_printk("cache_ext: Hi from the mru_evict_folios hook! :D\n");
@@ -117,7 +117,7 @@ void BPF_STRUCT_OPS(mru_evict_folios, struct page_cache_ext_eviction_ctx *evicti
 }
 
 SEC(".struct_ops.link")
-struct page_cache_ext_ops mru_ops = {
+struct cache_ext_ops mru_ops = {
 	.init = (void *)mru_init,
 	.evict_folios = (void *)mru_evict_folios,
 	.folio_accessed = (void *)mru_folio_accessed,

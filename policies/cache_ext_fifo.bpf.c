@@ -47,7 +47,7 @@ void BPF_STRUCT_OPS(fifo_folio_accessed, struct folio *folio) {
 	increment_access_counter();
 }
 
-void BPF_STRUCT_OPS(fifo_evict_folios, struct page_cache_ext_eviction_ctx *eviction_ctx,
+void BPF_STRUCT_OPS(fifo_evict_folios, struct cache_ext_eviction_ctx *eviction_ctx,
 		    struct mem_cgroup *memcg)
 {
 	if (bpf_cache_ext_list_iterate(memcg, main_list, bpf_fifo_evict_cb, eviction_ctx) < 0) {
@@ -76,7 +76,7 @@ void BPF_STRUCT_OPS(fifo_folio_added, struct folio *folio) {
 }
 
 SEC(".struct_ops.link")
-struct page_cache_ext_ops fifo_ops = {
+struct cache_ext_ops fifo_ops = {
 	.init = (void *)fifo_init,
 	.evict_folios = (void *)fifo_evict_folios,
 	.folio_accessed = (void *)fifo_folio_accessed,
