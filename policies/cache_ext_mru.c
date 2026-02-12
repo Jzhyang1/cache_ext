@@ -76,7 +76,7 @@ int main(int argc, char **argv)
 	}
 
 	// Attach page_cache_ext_ops to the specific cgroup
-	link = bpf_map__attach_cache_ext_ops(skel->maps.mru_ops, cgroup_fd);
+	link = bpf_map__attach_struct_ops(skel->maps.mru_ops, cgroup_fd);
 	if (link == NULL) {
 		perror("Failed to attach page_cache_ext_ops to cgroup");
 		goto cleanup;

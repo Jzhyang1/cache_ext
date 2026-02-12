@@ -122,7 +122,7 @@ int main(int argc, char **argv) {
 		goto cleanup;
 	}
 
-	link = bpf_map__attach_cache_ext_ops(skel->maps.s3fifo_ops, cgroup_fd);
+	link = bpf_map__attach_struct_ops(skel->maps.s3fifo_ops, cgroup_fd);
 	if (link == NULL) {
 		perror("Failed to attach page_cache_ext_ops to cgroup");
 		ret = 1;
