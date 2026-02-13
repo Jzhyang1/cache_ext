@@ -71,30 +71,23 @@ static int handle_event(void *ctx, void *data, size_t data_sz) {
 		printf("Prefetch request: address_space=%llu, index=%llu, nr_pages=%llu\n",
 			event->user_address_space, event->index, event->nr_pages);
 		// Also for debugging, send the next index as a userspace_event request for a prefetch
-	}
 
-	// prefetch via kernel function
-	int fd = *(int *)ctx;
-
-	int fetch_count = 5; // number of pages to prefetch in the test
-	int prev_index = event->index - fetch_count;
-	if (prev_index < 0)
-		return 0; // skip if index is 0 since we can't prefetch a negative index
-
-	struct userspace_event next_event = {
-		.user_address_space = event->user_address_space,
-		.index = prev_index,	// this is just for testing purposes
-		.nr_pages = fetch_count,
-	};
-	struct bpf_test_run_opts opts = {
-		.sz = sizeof(opts),
-		.ctx_in = &next_event,
-		.ctx_size_in = sizeof(next_event),
-	};
-	int err = bpf_prog_test_run_opts(fd, &opts);
-	if (err) {
-		perror("Failed to run pf_prefetch_folios program");
-		return 0;
+		int fd = *(int *)ctx;
+		struct userspace_event next_event = {
+			.user_address_space = event->user_address_space,
+			.index = event->index + 1,	// this is just for testing purposes
+			.nr_pages = 1,
+		};
+		struct bpf_test_run_opts opts = {
+			.sz = sizeof(opts),
+			.ctx_in = &next_event,
+			.ctx_size_in = sizeof(next_event),
+		};
+		int err = bpf_prog_test_run_opts(fd, &opts);
+		if (err) {
+			perror("Failed to run pf_prefetch_folios program");
+			return 0;
+		}
 	}
 	return 0;
 }
