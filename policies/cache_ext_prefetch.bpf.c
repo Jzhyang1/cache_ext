@@ -62,16 +62,17 @@ struct {
  ***********************************************************/
 
 SEC("syscall")
-void pf_prefetch_folios(void* ctx) {
+int pf_prefetch_folios(void* ctx) {
 	bpf_printk("cache_ext: prefetch_folios called\n");
 	struct userspace_event *event = (struct userspace_event *)ctx;
 	struct address_space **mapping_ptr = get_address_space_from_userspace_key(event->user_address_space);
 	if (!mapping_ptr || !*mapping_ptr) {
 		bpf_printk("cache_ext: prefetch: Failed to get address_space from userspace key\n");
-		return;
+		return 1;
 	}
 	// prefetch via kernel function
 	bpf_cache_ext_prefetch((u64)*mapping_ptr, event->index, event->nr_pages);
+	return 0;
 }
 
 /***********************************************************
