@@ -28,6 +28,7 @@ fi
 
 # Baseline and cache_ext
 python3 "$BENCH_PATH/bench_scan.py" \
+	--reverse True\
 	--cpu 1 \
 	--policy-loader "$POLICY_PATH/cache_ext_lru.out" \
 	--results-file "$RESULTS_PATH/scan_results.json" \
