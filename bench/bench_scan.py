@@ -40,6 +40,13 @@ class FileSearchBenchmark(BenchmarkFramework):
             required=True,
             help="Path to the scan util binary",
         )
+        parser.add_argument(
+            "--reverse",
+            "-r",
+            type=bool,
+            default=False,
+            help="Whether to do reverse scans in files (i.e. read bytes in reverse order)",
+        )
 
     def generate_configs(self, configs: List[Dict]) -> List[Dict]:
         configs = add_config_option("passes", [10], configs)
@@ -71,7 +78,8 @@ class FileSearchBenchmark(BenchmarkFramework):
     def benchmark_cmd(self, config):
         scan_util = self.args.scan_util_path
         data_dir = self.args.data_dir
-        scan_cmd = f"{scan_util} {data_dir}"
+        reverse = '-r' if self.args.reverse else ''
+        scan_cmd = f"{scan_util} {reverse} {data_dir}" # -r for reverse scan
         cmd = [
             "sudo",
             "cgexec",

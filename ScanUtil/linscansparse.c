@@ -5,10 +5,11 @@
 #include <sys/stat.h>
 #include <fcntl.h>
 #include <unistd.h>
+#include <stdbool.h>
 
 #define OFFSET_STEP 4096
 
-void scan_file(const char *filepath) {
+void scan_file(const char *filepath, bool reverse) {
     int fd = open(filepath, O_RDONLY);
     if (fd < 0) {
         perror(filepath);
@@ -22,9 +23,19 @@ void scan_file(const char *filepath) {
         return;
     }
 
-    off_t filesize = st.st_size;
+    off_t start, end, step;
+    if (reverse) {
+        start = st.st_size - 1;
+        end = start % OFFSET_STEP;
+        step = -OFFSET_STEP;
+    } else {
+        start = 0;
+        end = st.st_size & -OFFSET_STEP;
+        step = OFFSET_STEP;
+    }
+
     unsigned char buf;
-    for (off_t offset = 0; offset < filesize; offset += OFFSET_STEP) {
+    for (off_t offset = start; offset != end; offset += step) {
         if (lseek(fd, offset, SEEK_SET) == (off_t)-1) {
             perror("lseek");
             break;
@@ -39,7 +50,7 @@ void scan_file(const char *filepath) {
     close(fd);
 }
 
-void scan_dir(const char *dirpath) {
+void scan_dir(const char *dirpath, bool reverse) {
     DIR *dir = opendir(dirpath);
     if (!dir) {
         perror(dirpath);
@@ -55,25 +66,36 @@ void scan_dir(const char *dirpath) {
                 continue;
             // Recursively scan subdirectories
             snprintf(filepath, sizeof(filepath), "%s/%s", dirpath, entry->d_name);
-            scan_dir(filepath);
+            scan_dir(filepath, reverse);
             continue;
         }
         if (entry->d_type != DT_REG)
             continue; // Only regular files
 
         snprintf(filepath, sizeof(filepath), "%s/%s", dirpath, entry->d_name);
-        scan_file(filepath);
+        scan_file(filepath, reverse);
     }
 
     closedir(dir);
 }
 
+const char *usage = "Usage: scan [-r] <directory>\n";
+
 int main(int argc, char *argv[]) {
-    if (argc != 2) {
-        fprintf(stderr, "Usage: %s <directory>\n", argv[0]);
+    if (argc < 2) {
+        fprintf(stderr, "%s", usage);
         return 1;
     }
 
-    scan_dir(argv[1]);
+    bool reverse = false;
+    char* dirpath = NULL;
+    if (argc >= 3 && strcmp(argv[1], "-r") == 0) {
+        reverse = true;
+        dirpath = argv[2];
+    } else {
+        dirpath = argv[1];
+    }
+
+    scan_dir(dirpath, reverse);
     return 0;
 }
