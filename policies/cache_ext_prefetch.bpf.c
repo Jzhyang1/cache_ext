@@ -19,26 +19,12 @@ char _license[] SEC("license") = "GPL";
 #define __kptr __attribute__((btf_type_tag("kptr")))
 #endif
 
-#if DONT_USE_KPTR_REF
-#  ifdef __kptr_ref
-#    undef __kptr_ref
-#  endif
-#  define __kptr_ref	/* just make it a normal pointer */
-#else
-#  ifndef __kptr_ref
-#   define __kptr_ref __attribute__((btf_type_tag("kptr_ref")))
-#  endif
-#endif
-
-struct address_space_wrapper {
-	struct address_space __kptr *mapping;
-};
 
 struct {
 	__uint(type, BPF_MAP_TYPE_LRU_HASH);
 	__uint(max_entries, 1024);	// TODO: configurable amount of address_spaces that can be buffered for prefetching
 	__type(key, u64);
-	__type(value, struct address_space_wrapper);
+	__type(value, struct address_space __kptr*);
 } inverse_mapping_registry SEC(".maps");	// this translates address_space pointers from userspace descriptors
 
 struct userspace_event {
@@ -47,36 +33,8 @@ struct userspace_event {
 	u64 nr_pages;	// number of pages to prefetch
 };
 
-static inline struct address_space_wrapper* get_address_space_from_userspace_key(u64 key, struct address_space **mapping_out) {
-	struct address_space_wrapper *wrapper = bpf_map_lookup_elem(&inverse_mapping_registry, &key);
-	if (!wrapper) 
-		return NULL;
-
-	// perform the xchg operation to ensure ownership
-#if DONT_USE_KPTR_REF
-	struct address_space *mapping = wrapper->mapping;
-#else
-	struct address_space *mapping = bpf_kptr_xchg(&wrapper->mapping, NULL);
-#endif
-
-    if (!mapping)
-		return NULL;
-	*mapping_out = mapping;
-	return wrapper;
-}
-
-static inline void return_address_space_to_cache(struct address_space_wrapper *wrapper, struct address_space *mapping) {
-#if DONT_USE_KPTR_REF
-	// if we're not using kptr_ref, we don't need to do anything
-	return;
-#else
-	// return ownership of the address_space to the cache
-	struct address_space *old_mapping = bpf_kptr_xchg(&wrapper->mapping, mapping);
-	if (old_mapping != NULL) {
-		// this should never happen, it means that the wrapper was evicted while we were using the address_space
-		bpf_printk("cache_ext: Warning: Evicted wrapper still in use, potential use-after-free\n");
-	}
-#endif
+static inline struct address_space* get_address_space_from_userspace_key(u64 key) {
+	return bpf_map_lookup_elem(&inverse_mapping_registry, &key);
 }
 
 struct {
@@ -107,15 +65,13 @@ SEC("syscall")
 void pf_prefetch_folios(void* ctx) {
 	bpf_printk("cache_ext: prefetch_folios called\n");
 	struct userspace_event *event = (struct userspace_event *)ctx;
-	struct address_space *mapping;
-	struct address_space_wrapper *wrapper = get_address_space_from_userspace_key(event->user_address_space, &mapping);
-	if (!wrapper || !mapping) {
+	struct address_space **mapping_ptr = get_address_space_from_userspace_key(event->user_address_space);
+	if (!mapping_ptr || !*mapping_ptr) {
 		bpf_printk("cache_ext: prefetch: Failed to get address_space from userspace key\n");
 		return;
 	}
 	// prefetch via kernel function
-	bpf_cache_ext_prefetch(mapping, event->index, event->nr_pages);
-	return_address_space_to_cache(wrapper, mapping);
+	bpf_cache_ext_prefetch(*mapping_ptr, event->index, event->nr_pages);
 }
 
 /***********************************************************
@@ -169,19 +125,12 @@ void BPF_STRUCT_OPS(pf_folio_accessed, struct folio *folio) {
 	if (!is_folio_relevant(folio))
 		return;
 
-	u64 address_space_key = (u64)folio->mapping;
-	struct address_space *mapping;
-	struct address_space_wrapper *existing_entry = get_address_space_from_userspace_key(address_space_key, &mapping);
-	if (!existing_entry) {
+	struct address_space *mapping = folio->mapping;
+	u64 address_space_key = (u64)mapping;
+	struct address_space **existing_mapping = get_address_space_from_userspace_key(address_space_key);
+	if (!existing_mapping) {
 		// add it and and possibly evict an old one
-		struct address_space_wrapper wrapper = {
-#if DONT_USE_KPTR_REF
-			.mapping = folio->mapping,
-#else
-			.mapping = bpf_cache_ext_mapping_acquire(folio->mapping),
-#endif
-		};
-		if (bpf_map_update_elem(&inverse_mapping_registry, &address_space_key, &wrapper, BPF_ANY)) {
+		if (bpf_map_update_elem(&inverse_mapping_registry, &address_space_key, &mapping, BPF_ANY)) {
 			bpf_printk("cache_ext: access: Failed to update inverse mapping registry\n");
 			return;
 		}
