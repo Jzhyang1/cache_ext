@@ -24,7 +24,7 @@ struct {
 	__uint(type, BPF_MAP_TYPE_LRU_HASH);
 	__uint(max_entries, 1024);	// TODO: configurable amount of address_spaces that can be buffered for prefetching
 	__type(key, u64);
-	__type(value, struct address_space __kptr*);
+	__type(value, struct address_space __kptr *);
 } inverse_mapping_registry SEC(".maps");	// this translates address_space pointers from userspace descriptors
 
 struct userspace_event {
@@ -33,7 +33,7 @@ struct userspace_event {
 	u64 nr_pages;	// number of pages to prefetch
 };
 
-static inline struct address_space* get_address_space_from_userspace_key(u64 key) {
+static inline struct address_space __kptr *get_address_space_from_userspace_key(u64 key) {
 	return bpf_map_lookup_elem(&inverse_mapping_registry, &key);
 }
 
