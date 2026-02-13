@@ -98,7 +98,7 @@ u64 bpf_cache_ext_ds_registry_new_list(struct mem_cgroup *memcg) __ksym;
 
 struct address_space *bpf_cache_ext_mapping_acquire(struct address_space *mapping) __ksym;
 void bpf_cache_ext_mapping_release(struct address_space *mapping) __ksym;
-void bpf_cache_ext_prefetch(struct address_space *mapping, pgoff_t index, unsigned long nr_pages) __ksym;
+void bpf_cache_ext_prefetch(u64 mapping, pgoff_t index, unsigned long nr_pages) __ksym;
 
 #define BITS_PER_LONG 64
 #define BIT_MASK(nr)		(UL(1) << ((nr) % BITS_PER_LONG))

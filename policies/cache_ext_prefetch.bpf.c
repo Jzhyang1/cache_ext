@@ -33,7 +33,7 @@ struct userspace_event {
 	u64 nr_pages;	// number of pages to prefetch
 };
 
-static inline struct address_space __kptr *get_address_space_from_userspace_key(u64 key) {
+static inline struct address_space __kptr **get_address_space_from_userspace_key(u64 key) {
 	return bpf_map_lookup_elem(&inverse_mapping_registry, &key);
 }
 
@@ -71,7 +71,7 @@ void pf_prefetch_folios(void* ctx) {
 		return;
 	}
 	// prefetch via kernel function
-	bpf_cache_ext_prefetch(*mapping_ptr, event->index, event->nr_pages);
+	bpf_cache_ext_prefetch((u64)*mapping_ptr, event->index, event->nr_pages);
 }
 
 /***********************************************************
