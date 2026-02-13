@@ -37,8 +37,27 @@ struct userspace_event {
 	u64 nr_pages;	// number of pages to prefetch
 };
 
-static inline struct address_space_wrapper* get_address_space_from_userspace_key(u64 key) {
-	return bpf_map_lookup_elem(&inverse_mapping_registry, &key);
+static inline struct address_space_wrapper* get_address_space_from_userspace_key(u64 key, struct address_space **mapping_out) {
+	struct address_space_wrapper *wrapper = bpf_map_lookup_elem(&inverse_mapping_registry, &key);
+	if (!wrapper) 
+		return NULL;
+
+	// perform the xchg operation to ensure ownership
+	struct address_space *mapping = bpf_kptr_xchg(&wrapper->mapping, NULL);
+    if (!mapping)
+		return NULL;
+
+	*mapping_out = mapping;
+	return wrapper;
+}
+
+static inline void return_address_space_to_cache(struct address_space_wrapper *wrapper, struct address_space *mapping) {
+	// return ownership of the address_space to the cache
+	struct address_space *old_mapping = bpf_kptr_xchg(&wrapper->mapping, mapping);
+	if (old_mapping != NULL) {
+		// this should never happen, it means that the wrapper was evicted while we were using the address_space
+		bpf_printk("cache_ext: Warning: Evicted wrapper still in use, potential use-after-free\n");
+	}
 }
 
 struct {
@@ -69,14 +88,15 @@ SEC("syscall")
 void pf_prefetch_folios(void* ctx) {
 	bpf_printk("cache_ext: prefetch_folios called\n");
 	struct userspace_event *event = (struct userspace_event *)ctx;
-	struct address_space_wrapper *wrapper = get_address_space_from_userspace_key(event->user_address_space);
-	if (!wrapper) {
+	struct address_space *mapping;
+	struct address_space_wrapper *wrapper = get_address_space_from_userspace_key(event->user_address_space, &mapping);
+	if (!mapping) {
 		bpf_printk("cache_ext: prefetch: Failed to get address_space from userspace key\n");
 		return;
 	}
-	struct address_space *mapping = wrapper->mapping;
 	// prefetch via kernel function
 	bpf_cache_ext_prefetch(mapping, event->index, event->nr_pages);
+	return_address_space_to_cache(wrapper, mapping);
 }
 
 /***********************************************************
@@ -131,8 +151,9 @@ void BPF_STRUCT_OPS(pf_folio_accessed, struct folio *folio) {
 		return;
 
 	u64 address_space_key = (u64)folio->mapping;
-	struct address_space_wrapper *wrapper = get_address_space_from_userspace_key(address_space_key);
-	if (!wrapper) {
+	struct address_space *mapping;
+	struct address_space_wrapper *existing_entry = get_address_space_from_userspace_key(address_space_key, &mapping);
+	if (!existing_entry) {
 		// add it and and possibly evict an old one
 		struct address_space_wrapper wrapper = {
 			.mapping = bpf_cache_ext_mapping_acquire(folio->mapping),
