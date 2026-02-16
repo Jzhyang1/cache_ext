@@ -62,7 +62,7 @@ struct userspace_event {
 };
 
 #define OUTPUT_EVENT_BUFFER_SIZE 4096
-userspace_event output_buffer[OUTPUT_EVENT_BUFFER_SIZE];
+struct userspace_event output_buffer[OUTPUT_EVENT_BUFFER_SIZE];
 uint64_t output_buffer_head = 0;
 
 static int handle_event(void *ctx, void *data, size_t data_sz) {
