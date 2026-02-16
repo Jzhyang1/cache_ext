@@ -141,16 +141,13 @@ int main(int argc, char **argv) {
 		goto cleanup;
 	}
 
-	// Get fd of reconfigure program
-	int logging_prog_fd = bpf_program__fd(skel->progs.pf_logging_folios);
-
-	struct ring_buffer *events = ring_buffer__new(bpf_map__fd(skel->maps.userspace_events), handle_event, &logging_prog_fd, NULL);
+	struct ring_buffer *events = ring_buffer__new(bpf_map__fd(skel->maps.userspace_events), handle_event, NULL, NULL);
 	if (!events) {
 		perror("Failed to create ring buffer");
 		goto cleanup;
 	}
 
-	link = bpf_map__attach_cache_ext_ops(skel->maps.pf_ops, cgroup_fd);
+	link = bpf_map__attach_cache_ext_ops(skel->maps.log_ops, cgroup_fd);
 	if (link == NULL) {
 		perror("Failed to attach cache_ext_ops to cgroup");
 		goto cleanup;
