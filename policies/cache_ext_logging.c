@@ -67,6 +67,22 @@ struct userspace_event output_buffer[OUTPUT_EVENT_BUFFER_SIZE][2];
 int active_buffer = 0;
 uint64_t output_buffer_head = 0;
 
+static int flush_events(struct userspace_event *buffer, size_t count) {
+	printf("Flushing %zu events to file...\n", count);
+	FILE *f = fopen("page_accesses.log", "a");
+	if (f == NULL) {
+		perror("Failed to open log file");
+		return -1;
+	}
+
+	for (size_t i = 0; i < count; ++i) {
+		fprintf(f, "%llu: Address Space: %llu, Page Index: %llu\n",
+			buffer[i].nr_event, buffer[i].address_space, buffer[i].index);
+	}
+	fclose(f);
+	return 0;
+}
+
 static int handle_event(void *ctx, void *data, size_t data_sz) {
 	struct userspace_event *event = (struct userspace_event *)data;
 	output_buffer[active_buffer][output_buffer_head] = *event;
@@ -80,18 +96,7 @@ static int handle_event(void *ctx, void *data, size_t data_sz) {
 		struct userspace_event *prev_buf = output_buffer[active_buffer];
 		active_buffer = 1 - active_buffer; // switch buffer
 
-		printf("Buffer full, writing to file...\n");
-		FILE *f = fopen("page_accesses.log", "a");
-		if (f == NULL) {
-			perror("Failed to open log file");
-			return -1;
-		}
-
-		for (uint64_t i = 0; i < OUTPUT_EVENT_BUFFER_SIZE; ++i) {
-			fprintf(f, "%llu: Address Space: %llu, Page Index: %llu\n",
-				prev_buf[i].nr_event, prev_buf[i].address_space, prev_buf[i].index);
-		}
-		fclose(f);
+		flush_events(prev_buf, OUTPUT_EVENT_BUFFER_SIZE);
 	}
 	
 	return 0;
@@ -173,6 +178,7 @@ int main(int argc, char **argv) {
 	ret = 0;
 
 cleanup:
+flush_events(output_buffer[active_buffer], output_buffer_head);
 	close(cgroup_fd);
 	bpf_link__destroy(link);
 	cache_ext_logging_bpf__destroy(skel);
