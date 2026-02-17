@@ -62,28 +62,36 @@ struct userspace_event {
 };
 
 #define OUTPUT_EVENT_BUFFER_SIZE 4096
-struct userspace_event output_buffer[OUTPUT_EVENT_BUFFER_SIZE];
+// double buffering for userspace events - we write to file in batches to reduce overhead, but we don't want to miss events while writing
+struct userspace_event output_buffer[OUTPUT_EVENT_BUFFER_SIZE][2];
+int active_buffer = 0;
 uint64_t output_buffer_head = 0;
 
 static int handle_event(void *ctx, void *data, size_t data_sz) {
 	struct userspace_event *event = (struct userspace_event *)data;
-	output_buffer[output_buffer_head] = *event;
+	output_buffer[active_buffer][output_buffer_head] = *event;
+
+	uint64_t next_index = (output_buffer_head + 1) % OUTPUT_EVENT_BUFFER_SIZE;
+	output_buffer_head = next_index;
 
 	// TODO consider putting this into a separate thread if writing to file becomes a bottleneck
-	if (++output_buffer_head == OUTPUT_EVENT_BUFFER_SIZE) {
+	if (next_index == 0) {
 		// Buffer full, write to file
+		struct userspace_event *prev_buf = output_buffer[active_buffer];
+		active_buffer = 1 - active_buffer; // switch buffer
+
+		printf("Buffer full, writing to file...\n");
 		FILE *f = fopen("page_accesses.log", "a");
 		if (f == NULL) {
 			perror("Failed to open log file");
 			return -1;
 		}
 
-		for (uint64_t i = 0; i < output_buffer_head; ++i) {
+		for (uint64_t i = 0; i < OUTPUT_EVENT_BUFFER_SIZE; ++i) {
 			fprintf(f, "%llu: Address Space: %llu, Page Index: %llu\n",
-				output_buffer[i].nr_event, output_buffer[i].address_space, output_buffer[i].index);
+				prev_buf[i].nr_event, prev_buf[i].address_space, prev_buf[i].index);
 		}
 		fclose(f);
-		output_buffer_head = 0;
 	}
 	
 	return 0;
