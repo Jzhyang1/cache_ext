@@ -190,6 +190,7 @@ int main(int argc, char **argv) {
 
 cleanup:
 	flush_events(output_buffer[active_buffer], output_buffer_head);
+	ring_buffer__free(events);
 	close(cgroup_fd);
 	bpf_link__destroy(link);
 	cache_ext_logging_bpf__destroy(skel);
