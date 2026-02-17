@@ -105,6 +105,7 @@ int main(int argc, char **argv) {
 	struct bpf_link *link = NULL;
 	struct sigaction sa;
 	char watch_dir_path[PATH_MAX];
+	struct ring_buffer *events = NULL;
 	int cgroup_fd = -1;
 	int ret = 1;
 
@@ -154,7 +155,7 @@ int main(int argc, char **argv) {
 	// Get fd of reconfigure program
 	int prefetch_prog_fd = bpf_program__fd(skel->progs.pf_prefetch_folios);
 
-	struct ring_buffer *events = ring_buffer__new(bpf_map__fd(skel->maps.userspace_events), handle_event, &prefetch_prog_fd, NULL);
+	events = ring_buffer__new(bpf_map__fd(skel->maps.userspace_events), handle_event, &prefetch_prog_fd, NULL);
 	if (!events) {
 		perror("Failed to create ring buffer");
 		goto cleanup;
@@ -172,12 +173,24 @@ int main(int argc, char **argv) {
 		goto cleanup;
 	}
 
-	// Wait for keyboard input
-	printf("Press any key to exit...\n");
-	getchar();
-	ret = 0;
+	// Poll until exit signal is received
+	while (!exiting) {
+		ret = ring_buffer__poll(events, -1); // infinite timeout
+		
+		if (ret == -EINTR) {
+			ret = 0;
+			break;
+		} else if (ret < 0) {
+			fprintf(stderr, "error polling ring buffer: %d\n", ret);
+			ret = 1;
+			goto cleanup;
+		} else {
+			ret = 0;
+		}
+	}
 
 cleanup:
+	if (events != NULL) ring_buffer__free(events);
 	close(cgroup_fd);
 	bpf_link__destroy(link);
 	cache_ext_prefetch_bpf__destroy(skel);
