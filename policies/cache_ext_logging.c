@@ -172,13 +172,24 @@ int main(int argc, char **argv) {
 		goto cleanup;
 	}
 
-	// Wait for keyboard input
-	printf("Press any key to exit...\n");
-	getchar();
-	ret = 0;
+	// Poll until exit signal is received
+	while (!exiting) {
+		ret = ring_buffer__poll(events, -1); // infinite timeout
+		
+		if (ret == -EINTR) {
+			ret = 0;
+			break;
+		} else if (ret < 0) {
+			fprintf(stderr, "error polling ring buffer: %d\n", ret);
+			ret = 1;
+			goto cleanup;
+		} else {
+			ret = 0;
+		}
+	}
 
 cleanup:
-flush_events(output_buffer[active_buffer], output_buffer_head);
+	flush_events(output_buffer[active_buffer], output_buffer_head);
 	close(cgroup_fd);
 	bpf_link__destroy(link);
 	cache_ext_logging_bpf__destroy(skel);
