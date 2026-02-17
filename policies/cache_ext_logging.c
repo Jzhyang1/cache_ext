@@ -107,6 +107,7 @@ int main(int argc, char **argv) {
 	struct cache_ext_logging_bpf *skel = NULL;
 	struct bpf_link *link = NULL;
 	struct sigaction sa;
+	struct ring_buffer *events = NULL;
 	char watch_dir_path[PATH_MAX];
 	int cgroup_fd = -1;
 	int ret = 1;
@@ -154,7 +155,7 @@ int main(int argc, char **argv) {
 		goto cleanup;
 	}
 
-	struct ring_buffer *events = ring_buffer__new(bpf_map__fd(skel->maps.userspace_events), handle_event, NULL, NULL);
+	events = ring_buffer__new(bpf_map__fd(skel->maps.userspace_events), handle_event, NULL, NULL);
 	if (!events) {
 		perror("Failed to create ring buffer");
 		goto cleanup;
@@ -190,7 +191,7 @@ int main(int argc, char **argv) {
 
 cleanup:
 	flush_events(output_buffer[active_buffer], output_buffer_head);
-	ring_buffer__free(events);
+	if (events != NULL) ring_buffer__free(events);
 	close(cgroup_fd);
 	bpf_link__destroy(link);
 	cache_ext_logging_bpf__destroy(skel);
