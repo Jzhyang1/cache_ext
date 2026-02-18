@@ -67,9 +67,10 @@ struct userspace_event output_buffer[OUTPUT_EVENT_BUFFER_SIZE][2];
 int active_buffer = 0;
 uint64_t output_buffer_head = 0;
 
+static char log_filename[256];
+
 static int flush_events(struct userspace_event *buffer, size_t count) {
-	printf("Flushing %zu events to file...\n", count);
-	FILE *f = fopen("page_accesses.log", "a");
+	FILE *f = fopen(log_filename, "a");
 	if (f == NULL) {
 		perror("Failed to open log file");
 		return -1;
@@ -80,6 +81,17 @@ static int flush_events(struct userspace_event *buffer, size_t count) {
 			buffer[i].nr_event, buffer[i].address_space, buffer[i].index);
 	}
 	fclose(f);
+	return 0;
+}
+
+static int create_file() {
+	// first check if file exists, if it exists choose a different name
+	for (int i = 0; ; ++i) {
+		snprintf(log_filename, sizeof(log_filename), "page_accesses_%d.log", i);
+		if (access(log_filename, F_OK) == -1) {
+			break;
+		}
+	}
 	return 0;
 }
 
@@ -170,6 +182,12 @@ int main(int argc, char **argv) {
 	// This is necessary for the dir_watcher functionality
 	if (cache_ext_logging_bpf__attach(skel)) {
 		perror("Failed to attach BPF skeleton");
+		goto cleanup;
+	}
+
+	// Create log file
+	if (create_file() != 0) {
+		fprintf(stderr, "Failed to create log file\n");
 		goto cleanup;
 	}
 
