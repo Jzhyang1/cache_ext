@@ -61,10 +61,9 @@ struct {
  * Syscall wrapper to perform prefetch requests from userspace
  ***********************************************************/
 
-static int has_printed = 0;
-
 SEC("syscall")
 int pf_prefetch_folios(void* ctx) {
+	static int has_printed = 0;
 	if (!has_printed) {
 		bpf_printk("cache_ext: prefetch_folios syscall called for the first time\n");
 		has_printed = 1;
