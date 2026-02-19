@@ -63,11 +63,8 @@ struct {
 
 SEC("syscall")
 int pf_prefetch_folios(void* ctx) {
-	static int has_printed = 0;
-	if (!has_printed) {
-		bpf_printk("cache_ext: prefetch_folios syscall called for the first time\n");
-		has_printed = 1;
-	}
+	bpf_printk("cache_ext: prefetch_folios syscall called\n");
+	
 	struct userspace_event *event = (struct userspace_event *)ctx;
 	struct address_space **mapping_ptr = get_address_space_from_userspace_key(event->user_address_space);
 	if (!mapping_ptr || !*mapping_ptr) {
