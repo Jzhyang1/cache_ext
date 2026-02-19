@@ -61,9 +61,14 @@ struct {
  * Syscall wrapper to perform prefetch requests from userspace
  ***********************************************************/
 
+static int has_printed = 0;
+
 SEC("syscall")
 int pf_prefetch_folios(void* ctx) {
-	bpf_printk("cache_ext: prefetch_folios called\n");
+	if (!has_printed) {
+		bpf_printk("cache_ext: prefetch_folios syscall called for the first time\n");
+		has_printed = 1;
+	}
 	struct userspace_event *event = (struct userspace_event *)ctx;
 	struct address_space **mapping_ptr = get_address_space_from_userspace_key(event->user_address_space);
 	if (!mapping_ptr || !*mapping_ptr) {
