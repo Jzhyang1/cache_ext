@@ -59,6 +59,7 @@ struct userspace_event {
 	uint64_t address_space;	// some identifier
 	uint64_t index;	// page offset in file
 	uint64_t nr_event; // order of access
+	uint64_t timestamp; // time of access
 };
 
 #define OUTPUT_EVENT_BUFFER_SIZE 4096
@@ -77,8 +78,8 @@ static int flush_events(struct userspace_event *buffer, size_t count) {
 	}
 
 	for (size_t i = 0; i < count; ++i) {
-		fprintf(f, "%llu: Address Space: %llu, Page Index: %llu\n",
-			buffer[i].nr_event, buffer[i].address_space, buffer[i].index);
+		fprintf(f, "%llu: Address Space: %llu, Page Index: %llu, Timestamp: %llu\n",
+			buffer[i].nr_event, buffer[i].address_space, buffer[i].index, buffer[i].timestamp);
 	}
 	fclose(f);
 	return 0;

@@ -19,6 +19,7 @@ struct userspace_event {
 	u64 address_space;
 	u64 index;	// page offset in file
 	u64 nr_event; // order of access
+	u64 timestamp;
 };
 
 struct {
@@ -81,6 +82,7 @@ void BPF_STRUCT_OPS(log_folio_accessed, struct folio *folio) {
 		.address_space = (u64)folio->mapping,
 		.index = folio->index,
 		.nr_event = access_count++,
+		.timestamp = bpf_ktime_get_ns(),
 	};
 	bpf_ringbuf_output(&userspace_events, &event, sizeof(event), 0);
 }
