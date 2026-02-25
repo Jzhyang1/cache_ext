@@ -601,14 +601,7 @@ class BenchmarkFramework(ABC):
             if self.args.track_sched:
                 # Use `perf sched record` to track scheduler events during the benchmark
                 # Make sure it is in the background
-                perf_cmd = [
-                    "sudo",
-                    "perf",
-                    "sched",
-                    "record",
-                    "&"
-                ]
-                run(perf_cmd, check=False)
+                run(["sudo perf sched record & "], check=False)
 
             # Run benchmark
             cmd = self.benchmark_cmd(config)
