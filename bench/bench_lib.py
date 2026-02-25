@@ -598,21 +598,23 @@ class BenchmarkFramework(ABC):
             # Prepare environment for benchmarking
             self.benchmark_prepare(config)
 
+            if self.args.track_sched:
+                # Use `perf sched record` to track scheduler events during the benchmark
+                # Make sure it is in the background
+                perf_cmd = [
+                    "sudo",
+                    "perf",
+                    "sched",
+                    "record",
+                    "&"
+                ]
+                run(perf_cmd, check=False)
+
             # Run benchmark
             cmd = self.benchmark_cmd(config)
 
             # Limit CPUs
             cmd = ["taskset", "-c", "0-%s" % str(config["cpus"] - 1)] + cmd
-
-            if self.args.track_sched:
-                # Use `perf sched record` to track scheduler events during the benchmark
-                perf_cmd = [
-                    "sudo",
-                    "perf",
-                    "sched",
-                    "record"
-                ]
-                cmd = perf_cmd + ["&"] + cmd # run perf in the background to track the whole benchmark
 
             env = os.environ
             if self.args.debug_segfault:
