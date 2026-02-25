@@ -601,7 +601,8 @@ class BenchmarkFramework(ABC):
             if self.args.track_sched:
                 # Use `perf sched record` to track scheduler events during the benchmark
                 # Make sure it is in the background
-                run(["sudo", "perf sched record & "], check=False)
+                perf_cmd = ["sudo","perf", "sched", "record"]
+                p = subprocess.Popen(perf_cmd)
 
             # Run benchmark
             cmd = self.benchmark_cmd(config)
@@ -647,7 +648,7 @@ class BenchmarkFramework(ABC):
 
             # End perf
             if self.args.track_sched:
-                run(["sudo", "pkill", "perf"]) # send SIGINT to perf to end recording
+                p.kill()
                 
             # Save results
             log.info("Parsing results...")
