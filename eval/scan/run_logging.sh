@@ -30,6 +30,7 @@ sudo rm "$RESULTS_PATH/scan_fast_results.json" || true
 
 # Baseline and cache_ext
 python3 "$BENCH_PATH/bench_scan.py" \
+	--track-sched True \
 	--cpu 1 \
 	--policy-loader "$POLICY_PATH/cache_ext_logging.out" \
 	--results-file "$RESULTS_PATH/scan_fast_results.json" \

@@ -42,6 +42,7 @@ fi
 for POLICY in "${POLICIES[@]}"; do
 	echo "Running policy: ${POLICY}"
 	python3 "$BENCH_PATH/bench_leveldb.py" \
+		--track-sched True \
 		--cpu 8 \
 		--policy-loader "$POLICY_PATH/${POLICY}.out" \
 		--results-file "$RESULTS_PATH/ycsb_results.json" \
@@ -64,6 +65,7 @@ echo "Running baseline MGLRU"
 python3 "$BENCH_PATH/bench_leveldb.py" \
 	--cpu 8 \
 	--policy-loader "$POLICY_PATH/${POLICY}.out" \
+	--track-sched True \
 	--results-file "$RESULTS_PATH/ycsb_results_mglru.json" \
 	--leveldb-db "$DB_PATH" \
 	--fadvise-hints "" \

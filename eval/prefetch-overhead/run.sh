@@ -28,6 +28,7 @@ fi
 
 # Baseline and cache_ext
 python3 "$BENCH_PATH/bench_scan.py" \
+	--track-sched True\
 	--reverse True\
 	--cpu 1 \
 	--policy-loader "$POLICY_PATH/cache_ext_prefetch.out" \

@@ -27,6 +27,7 @@ fi
 
 # Baseline and cache_ext
 python3 "$BENCH_PATH/bench_filesearch.py" \
+	--track-sched True \
 	--cpu 8 \
 	--policy-loader "$POLICY_PATH/cache_ext_logging.out" \
 	--results-file "$RESULTS_PATH/filesearch_results.json" \

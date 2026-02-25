@@ -49,6 +49,7 @@ for POLICY in "${POLICIES[@]}"; do
 	for CLUSTER in "${CLUSTERS[@]}"; do
 		echo "Running policy: ${POLICY} on cluster ${CLUSTER}"
 		python3 "$BENCH_PATH/bench_twitter_trace.py" \
+			--track-sched True \
 			--cpu 8 \
 			--policy-loader "$POLICY_PATH/${POLICY}.out" \
 			--results-file "$RESULTS_PATH/twitter_traces_${CLUSTER}_results.json" \
