@@ -533,6 +533,12 @@ class BenchmarkFramework(ABC):
             default=1,
             help="Number of iterations to run for each config",
         )
+        parser.add_argument(
+            "--track-sched",
+            type=bool,
+            default=False,
+            help="Whether to track scheduler events during the benchmark",
+        )
         self.add_arguments(parser)
         return parser.parse_args()
 
@@ -598,6 +604,16 @@ class BenchmarkFramework(ABC):
             # Limit CPUs
             cmd = ["taskset", "-c", "0-%s" % str(config["cpus"] - 1)] + cmd
 
+            if self.args.track_sched:
+                # Use `perf sched record` to track scheduler events during the benchmark
+                perf_cmd = [
+                    "sudo",
+                    "perf",
+                    "sched",
+                    "record"
+                ]
+                cmd = perf_cmd + ["&"] + cmd # run perf in the background to track the whole benchmark
+
             env = os.environ
             if self.args.debug_segfault:
                 env["SEGFAULT_SIGNALS"] = "abrt segv"
@@ -633,6 +649,11 @@ class BenchmarkFramework(ABC):
                 raise e
 
             self.after_benchmark(config)
+
+            # End perf
+            if self.args.track_sched:
+                run(["sudo", "pkill", "perf"]) # send SIGINT to perf to end recording
+                
             # Save results
             log.info("Parsing results...")
             if self.second_command:
