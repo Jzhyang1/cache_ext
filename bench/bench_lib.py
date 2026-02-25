@@ -594,6 +594,7 @@ class BenchmarkFramework(ABC):
             log.info(
                 "Running benchmark for %s with config %s" % (config["name"], config)
             )
+            log.info("Running benchmark with args: %s" % self.args)
 
             # Prepare environment for benchmarking
             self.benchmark_prepare(config)
