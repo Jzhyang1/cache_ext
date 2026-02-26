@@ -18,8 +18,16 @@ RESULTS_PATH="$BASE_DIR/results"
 
 ITERATIONS=3
 
-POLICIES=(
-	"cache_ext_logging"
+POLICY="cache_ext_logging"
+BENCHMARKS=(
+	"ycsb_a"
+	"ycsb_b"
+	"ycsb_c"
+	"ycsb_d"
+	"ycsb_e"
+	"ycsb_f"
+	"uniform"
+	"uniform_read_write"
 )
 
 mkdir -p "$RESULTS_PATH"
@@ -39,9 +47,15 @@ if ! "$BASE_DIR/utils/disable-mglru.sh"; then
 fi
 
 # Baseline and cache_ext
-for POLICY in "${POLICIES[@]}"; do
-	echo "Running policy: ${POLICY}"
-	perf sched record & python3 "$BENCH_PATH/bench_leveldb.py" \
+for BENCHMARK in "${BENCHMARKS[@]}"; do
+	echo "Running benchmark: ${BENCHMARK}"
+	perf sched record &
+	if ! [-f "perf.data"]; then
+		echo "Failed to start perf. Please check if perf is installed and try again."
+		exit 1
+	fi
+
+	python3 "$BENCH_PATH/bench_leveldb.py" \
 		--cpu 8 \
 		--policy-loader "$POLICY_PATH/${POLICY}.out" \
 		--results-file "$RESULTS_PATH/ycsb_results.json" \
@@ -49,9 +63,18 @@ for POLICY in "${POLICIES[@]}"; do
 		--fadvise-hints "" \
 		--iterations "$ITERATIONS" \
 		--bench-binary-dir "$YCSB_PATH/build" \
-		--benchmark ycsb_a,ycsb_b,ycsb_c,ycsb_d,ycsb_e,ycsb_f,uniform,uniform_read_write
+		--benchmark "$BENCHMARK"
 	pkill perf
-	perf script --ns -i perf.data > perf_${POLICY}.txt
+	if ! [ $? -eq 0 ]; then
+		echo "Failed to stop perf. Please check if perf is running and try again."
+		exit 1
+	fi
+	perf script --ns -i perf.data > perf_${BENCHMARK}.txt
+
+	if ! [ $? -eq 0 ]; then
+		echo "Failed to process perf data. This should not happen."
+		exit 1
+	fi
 done
 
 echo "YCSB benchmark completed. Results saved to $RESULTS_PATH."
