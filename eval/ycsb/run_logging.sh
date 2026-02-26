@@ -49,12 +49,7 @@ fi
 # Baseline and cache_ext
 for BENCHMARK in "${BENCHMARKS[@]}"; do
 	echo "Running benchmark: ${BENCHMARK}"
-	perf sched record &
-	if ! [-f "perf.data"]; then
-		echo "Failed to start perf. Please check if perf is installed and try again."
-		exit 1
-	fi
-
+	perf sched record -a --\
 	python3 "$BENCH_PATH/bench_leveldb.py" \
 		--cpu 8 \
 		--policy-loader "$POLICY_PATH/${POLICY}.out" \
@@ -64,14 +59,13 @@ for BENCHMARK in "${BENCHMARKS[@]}"; do
 		--iterations "$ITERATIONS" \
 		--bench-binary-dir "$YCSB_PATH/build" \
 		--benchmark "$BENCHMARK"
-	pkill perf
-	if ! [ $? -eq 0 ]; then
-		echo "Failed to stop perf. Please check if perf is running and try again."
+	if [ ! $? -eq 0 ]; then
+		echo "Benchmark ${BENCHMARK} failed. Please check the output for details."
 		exit 1
 	fi
 	perf script --ns -i perf.data > perf_${BENCHMARK}.txt
 
-	if ! [ $? -eq 0 ]; then
+	if [ ! $? -eq 0 ]; then
 		echo "Failed to process perf data. This should not happen."
 		exit 1
 	fi
