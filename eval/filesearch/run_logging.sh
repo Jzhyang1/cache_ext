@@ -26,12 +26,22 @@ if ! "$BASE_DIR/utils/disable-mglru.sh"; then
 fi
 
 # Baseline and cache_ext
+perf sched record -a --\
 python3 "$BENCH_PATH/bench_filesearch.py" \
-	--track-sched True \
 	--cpu 8 \
 	--policy-loader "$POLICY_PATH/cache_ext_logging.out" \
 	--results-file "$RESULTS_PATH/filesearch_results.json" \
 	--data-dir "$FILES_PATH" \
 	--iterations "$ITERATIONS"
+if [ ! $? -eq 0 ]; then
+	echo "Benchmark filesearch failed. Please check the output for details."
+	exit 1
+fi
+perf script --ns -i perf.data > perf_filesearch.txt
+
+if [ ! $? -eq 0 ]; then
+	echo "Failed to process perf data. This should not happen."
+	exit 1
+fi
 
 echo "File search benchmark completed. Results saved to $RESULTS_PATH."
