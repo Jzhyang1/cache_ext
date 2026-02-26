@@ -603,7 +603,11 @@ class BenchmarkFramework(ABC):
                 # Use `perf sched record` to track scheduler events during the benchmark
                 # Make sure it is in the background
                 perf_cmd = ["sudo","perf", "sched", "record"]
-                p = subprocess.Popen(perf_cmd)
+                p = subprocess.Popen(
+                    perf_cmd, 
+                    stdout=subprocess.PIPE,
+                    stderr=subprocess.PIPE
+                )
 
             # Run benchmark
             cmd = self.benchmark_cmd(config)
