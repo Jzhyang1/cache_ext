@@ -45,7 +45,7 @@ fi
 #	We already support this in the bench script.
 for CLUSTER in "${CLUSTERS[@]}"; do
 	echo "Running policy: ${POLICY} on cluster ${CLUSTER}"
-	perf sched record -a --\
+	perf sched record -a -- \
 	python3 "$BENCH_PATH/bench_twitter_trace.py" \
 		--track-sched True \
 		--cpu 8 \

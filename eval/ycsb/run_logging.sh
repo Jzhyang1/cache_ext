@@ -49,7 +49,7 @@ fi
 # Baseline and cache_ext
 for BENCHMARK in "${BENCHMARKS[@]}"; do
 	echo "Running benchmark: ${BENCHMARK}"
-	perf sched record -a --\
+	perf sched record -a -- \
 	python3 "$BENCH_PATH/bench_leveldb.py" \
 		--cpu 8 \
 		--policy-loader "$POLICY_PATH/${POLICY}.out" \

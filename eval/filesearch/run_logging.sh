@@ -26,7 +26,7 @@ if ! "$BASE_DIR/utils/disable-mglru.sh"; then
 fi
 
 # Baseline and cache_ext
-perf sched record -a --\
+perf sched record -a -- \
 python3 "$BENCH_PATH/bench_filesearch.py" \
 	--cpu 8 \
 	--policy-loader "$POLICY_PATH/cache_ext_logging.out" \
