@@ -54,31 +54,4 @@ for POLICY in "${POLICIES[@]}"; do
 	perf script --ns -i perf.data > perf_${POLICY}.txt
 done
 
-# Enable MGLRU
-if ! "$BASE_DIR/utils/enable-mglru.sh"; then
-	echo "Failed to enable MGLRU. Please check the script."
-	exit 1
-fi
-
-# MGLRU
-# TODO: Remove --policy-loader requirement when using --default-only
-echo "Running baseline MGLRU"
-python3 "$BENCH_PATH/bench_leveldb.py" \
-	--cpu 8 \
-	--policy-loader "$POLICY_PATH/${POLICY}.out" \
-	--track-sched True \
-	--results-file "$RESULTS_PATH/ycsb_results_mglru.json" \
-	--leveldb-db "$DB_PATH" \
-	--fadvise-hints "" \
-	--iterations "$ITERATIONS" \
-	--bench-binary-dir "$YCSB_PATH/build" \
-	--benchmark ycsb_a,ycsb_b,ycsb_c,ycsb_d,ycsb_e,ycsb_f,uniform,uniform_read_write \
-	--default-only
-
-# Disable MGLRU
-if ! "$BASE_DIR/utils/disable-mglru.sh"; then
-	echo "Failed to disable MGLRU. Please check the script."
-	exit 1
-fi
-
 echo "YCSB benchmark completed. Results saved to $RESULTS_PATH."
