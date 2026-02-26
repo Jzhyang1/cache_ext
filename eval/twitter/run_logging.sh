@@ -16,11 +16,9 @@ YCSB_PATH="$BASE_DIR/My-YCSB"
 DB_DIRS=$(realpath "$BASE_DIR/../")
 RESULTS_PATH="$BASE_DIR/results"
 
-ITERATIONS=3
+ITERATIONS=1
 
-POLICIES=(
-	"cache_ext_logging"
-)
+POLICY="cache_ext_logging"
 
 CLUSTERS=(17 18 24 34 52)
 
@@ -45,20 +43,29 @@ fi
 # Baseline and cache_ext
 # TODO: Get rid of the CLUSTER loop and pass a comma-separated list of benchmarks
 #	We already support this in the bench script.
-for POLICY in "${POLICIES[@]}"; do
-	for CLUSTER in "${CLUSTERS[@]}"; do
-		echo "Running policy: ${POLICY} on cluster ${CLUSTER}"
-		python3 "$BENCH_PATH/bench_twitter_trace.py" \
-			--track-sched True \
-			--cpu 8 \
-			--policy-loader "$POLICY_PATH/${POLICY}.out" \
-			--results-file "$RESULTS_PATH/twitter_traces_${CLUSTER}_results.json" \
-			--leveldb-db "$DB_DIRS/leveldb_twitter_cluster${CLUSTER}_db" \
-			--iterations "$ITERATIONS" \
-			--bench-binary-dir "$YCSB_PATH/build" \
-			--twitter-traces-dir "$DB_DIRS/twitter-traces" \
-			--benchmark "twitter_cluster${CLUSTER}_bench"
-	done
+for CLUSTER in "${CLUSTERS[@]}"; do
+	echo "Running policy: ${POLICY} on cluster ${CLUSTER}"
+	perf sched record -a --\
+	python3 "$BENCH_PATH/bench_twitter_trace.py" \
+		--track-sched True \
+		--cpu 8 \
+		--policy-loader "$POLICY_PATH/${POLICY}.out" \
+		--results-file "$RESULTS_PATH/twitter_traces_${CLUSTER}_results.json" \
+		--leveldb-db "$DB_DIRS/leveldb_twitter_cluster${CLUSTER}_db" \
+		--iterations "$ITERATIONS" \
+		--bench-binary-dir "$YCSB_PATH/build" \
+		--twitter-traces-dir "$DB_DIRS/twitter-traces" \
+		--benchmark "twitter_cluster${CLUSTER}_bench"
+	if [ ! $? -eq 0 ]; then
+		echo "Cluster ${CLUSTER} failed. Please check the output for details."
+		exit 1
+	fi
+	perf script --ns -i perf.data > perf_${CLUSTER}.txt
+
+	if [ ! $? -eq 0 ]; then
+		echo "Failed to process perf data. This should not happen."
+		exit 1
+	fi
 done
 
 
