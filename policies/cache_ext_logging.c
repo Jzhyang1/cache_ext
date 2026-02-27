@@ -55,11 +55,23 @@ static int validate_watch_dir(const char *watch_dir, char *watch_dir_full_path) 
  * Userspace handling for logging requests
  ***********************************************************/
 
+#define EVENT_PAGE_ACCESS 0
+#define EVENT_SCHED_SWITCH 1
+
 struct userspace_event {
-	uint64_t address_space;	// some identifier
-	uint64_t index;	// page offset in file
-	uint64_t nr_event; // order of access
+	uint32_t nr_event; // order of access
+	uint32_t type; 	// 0 for access, 1 for sched switch
 	uint64_t timestamp; // time of access
+	union {
+		struct {
+			uint64_t address_space;
+			uint64_t index;	// page offset in file
+		};
+		struct {
+			uint64_t prev_pid;
+			uint64_t next_pid;
+		};
+	};
 };
 
 #define OUTPUT_EVENT_BUFFER_SIZE 4096
@@ -78,8 +90,16 @@ static int flush_events(struct userspace_event *buffer, size_t count) {
 	}
 
 	for (size_t i = 0; i < count; ++i) {
-		fprintf(f, "%llu: Address Space: %llu, Page Index: %llu, Timestamp: %llu\n",
-			buffer[i].nr_event, buffer[i].address_space, buffer[i].index, buffer[i].timestamp);
+		if (buffer[i].type == EVENT_PAGE_ACCESS) {
+			fprintf(f, "%lu: Page Access - Address Space: %llu, Page Index: %llu, Timestamp: %llu\n",
+				buffer[i].nr_event, buffer[i].address_space, buffer[i].index, buffer[i].timestamp);
+		} else if (buffer[i].type == EVENT_SCHED_SWITCH) {
+			fprintf(f, "%lu: Sched Switch - Prev PID: %llu, Next PID: %llu, Timestamp: %llu\n",
+				buffer[i].nr_event, buffer[i].prev_pid, buffer[i].next_pid, buffer[i].timestamp);
+		} else {
+			fprintf(f, "%lu: Unknown Event Type %u at Timestamp: %llu\n",
+				buffer[i].nr_event, buffer[i].type, buffer[i].timestamp);
+		}
 	}
 	fclose(f);
 	return 0;

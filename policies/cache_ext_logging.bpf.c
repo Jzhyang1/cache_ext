@@ -15,11 +15,23 @@ char _license[] SEC("license") = "GPL";
  * 	-> write to file
  ***********************************************************/
 
+#define EVENT_PAGE_ACCESS 0
+#define EVENT_SCHED_SWITCH 1
+
 struct userspace_event {
-	u64 address_space;
-	u64 index;	// page offset in file
-	u64 nr_event; // order of access
+	u32 nr_event; // order of access
+	u32 type; 	// 0 for access, 1 for sched switch
 	u64 timestamp;
+	union {
+		struct {
+			u64 address_space;
+			u64 index;	// page offset in file
+		};
+		struct {
+			u64 prev_pid;
+			u64 next_pid;
+		};
+	};
 };
 
 struct {
@@ -83,6 +95,7 @@ void BPF_STRUCT_OPS(log_folio_accessed, struct folio *folio) {
 		.index = folio->index,
 		.nr_event = access_count++,
 		.timestamp = bpf_ktime_get_ns(),
+		.type = EVENT_PAGE_ACCESS,
 	};
 	bpf_ringbuf_output(&userspace_events, &event, sizeof(event), 0);
 }
@@ -112,3 +125,29 @@ struct cache_ext_ops log_ops = {
 	.folio_added = (void *)log_folio_added,
 	.folio_accessed = (void *)log_folio_accessed,
 };
+
+/***********************************************************
+ * BPF program to log scheduling events
+ ***********************************************************/
+
+// Hook into the sched_switch tracepoint
+SEC("tracepoint/sched/sched_switch")
+int bpf_prog_sched_switch(struct trace_event_raw_sched_switch *ctx) {
+    // Read the PID of the next task being scheduled
+    pid_t next_pid = ctx->next_pid;
+    pid_t prev_pid = ctx->prev_pid;
+    
+    // Create an event to send to userspace
+	struct userspace_event event = {
+		.prev_pid = prev_pid,
+		.next_pid = next_pid,
+		.nr_event = access_count++,
+		.timestamp = bpf_ktime_get_ns(),
+		.type = EVENT_SCHED_SWITCH,
+	};
+	
+	// Send the event to userspace via the ring buffer
+	bpf_ringbuf_output(&userspace_events, &event, sizeof(event), 0);
+    
+    return 0;
+}

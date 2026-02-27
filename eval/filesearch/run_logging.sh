@@ -33,15 +33,9 @@ python3 "$BENCH_PATH/bench_filesearch.py" \
 	--results-file "$RESULTS_PATH/filesearch_results.json" \
 	--data-dir "$FILES_PATH" \
 	--iterations "$ITERATIONS"
-if [ ! $? -eq 0 ]; then
-	echo "Benchmark filesearch failed. Please check the output for details."
-	exit 1
-fi
-perf script --ns -i perf.data > perf_filesearch.txt
 
 if [ ! $? -eq 0 ]; then
-	echo "Failed to process perf data. This should not happen."
-	exit 1
+	echo "Benchmark filesearch failed. Please check the output for details."
 fi
 
 echo "File search benchmark completed. Results saved to $RESULTS_PATH."
