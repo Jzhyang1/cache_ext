@@ -20,6 +20,7 @@
 
 import argparse
 import re
+import os
 
 # Arguments to the program:
 # check.py <logfile> <A> <B>
@@ -28,11 +29,7 @@ argparser = argparse.ArgumentParser(description='Process a log of scheduler and 
 argparser.add_argument('logfile', type=str, help='Path to the log file')
 argparser.add_argument('A', type=int, help='Number of past processes to consider for "alive" status')
 argparser.add_argument('B', type=int, help='Number of future processes to consider for "alive" status')
-
-args = argparser.parse_args()
-logfile = args.logfile
-A = int(args.A)
-B =int(args.B)
+argparser.add_argument('--recursive', '-r', action='store_true', help='Recursively process log files in a directory')
 
 # Error handling
 error_count = 0
@@ -45,51 +42,67 @@ def perror(*args):
     elif error_count == MAX_ERROR_COUNT:
         print("MAX_ERROR_COUNT exceeded, stopping logging")
 
-# Metric and data tracking
-running_scores = {}
-alive_scores = {}
-running_pids = set()
-alive_pids = {} 
+def process_log_file(logfile, A, B):
+    # Metric and data tracking
+    running_scores = {}
+    alive_scores = {}
+    running_pids = set()
+    alive_pids = {} 
 
-# We use a circular buffer
-track_alive_pids = [0] * (A + B)
-split = A
+    # We use a circular buffer
+    track_alive_pids = [0] * (A + B)
+    split = A
 
-with open(logfile, "r") as f:
-    pattern1 = re.compile(r'(\d+): Page Access - Address Space: (\d+), Page Index: (\d+), Timestamp: (\d+)')
-    pattern2 = re.compile(r'(\d+): Sched Switch - Prev PID: (\d+), Next PID: (\d+), Timestamp: (\d+)')
-    for line in f:
-        if pat := pattern1.match(line):
-            assert len(running_pids) != 0
-            assert len(alive_pids) != 0
-            
-            addr_space, page = int(pat.group(2)), int(pat.group(3))
-            n = len(running_pids)
-            for pid in running_pids:
-                idx = (pid, addr_space, page)
-                running_scores[idx] = running_scores.get(idx, 0) + 1/n
-            for pid in alive_pids:
-                idx = (pid, addr_space, page)
-                alive_scores[idx] = alive_scores.get(idx, 0) + 1/n
-        elif pat := pattern2.match(line):
-            prev, nxt = int(pat.group(2)), int(pat.group(3))
-            if prev in running_pids: running_pids.remove(prev)
-            running_pids.add(nxt)
+    with open(logfile, "r") as f:
+        pattern1 = re.compile(r'(\d+): Page Access - Address Space: (\d+), Page Index: (\d+), Timestamp: (\d+)')
+        pattern2 = re.compile(r'(\d+): Sched Switch - Prev PID: (\d+), Next PID: (\d+), Timestamp: (\d+)')
+        for line in f:
+            if pat := pattern1.match(line):
+                assert len(running_pids) != 0
+                assert len(alive_pids) != 0
+                
+                addr_space, page = int(pat.group(2)), int(pat.group(3))
+                n = len(running_pids)
+                for pid in running_pids:
+                    idx = (pid, addr_space, page)
+                    running_scores[idx] = running_scores.get(idx, 0) + 1/n
+                for pid in alive_pids:
+                    idx = (pid, addr_space, page)
+                    alive_scores[idx] = alive_scores.get(idx, 0) + 1/n
+            elif pat := pattern2.match(line):
+                prev, nxt = int(pat.group(2)), int(pat.group(3))
+                if prev in running_pids: running_pids.remove(prev)
+                running_pids.add(nxt)
 
-            evict_idx = (split + B)%(A+B)
-            cnt = alive_pids.get(evict_idx, 0) - 1
-            if cnt - 1 == 0:
-                candidate = track_alive_pids[evict_idx]
-                del alive_pids[candidate]
-            track_alive_pids[evict_idx] = nxt
-            alive_pids[nxt] = alive_pids.get(nxt, 0) + 1
-        else:
-            perror("No match found for", line)
+                evict_idx = (split + B)%(A+B)
+                cnt = alive_pids.get(evict_idx, 0) - 1
+                if cnt - 1 == 0:
+                    candidate = track_alive_pids[evict_idx]
+                    del alive_pids[candidate]
+                track_alive_pids[evict_idx] = nxt
+                alive_pids[nxt] = alive_pids.get(nxt, 0) + 1
+            else:
+                perror("No match found for", line)
 
-# MSE calculation
-# Get the union of the sets of keys
-keys = {*running_scores.keys(), *alive_scores.keys()}
-total = 0
-for key in keys:
-    total += (running_scores.get(key, 0) - alive_scores.get(key, 0))**2
-print("MSE is", total/len(keys))
+    # MSE calculation
+    # Get the union of the sets of keys
+    keys = {*running_scores.keys(), *alive_scores.keys()}
+    total = 0
+    for key in keys:
+        total += (running_scores.get(key, 0) - alive_scores.get(key, 0))**2
+    print("MSE is", total/len(keys))
+
+if __name__ == "__main__":
+    args = argparser.parse_args()
+    A = int(args.A)
+    B =int(args.B)
+
+    if args.recursive:
+        for root, dirs, files in os.walk(args.logfile):
+            for file in files:
+                if file.endswith(".log"):
+                    print("Processing", os.path.join(root, file))
+                    try:
+                        process_log_file(os.path.join(root, file), A, B)
+                    except Exception as e:
+                        perror("Error processing", os.path.join(root, file), ":", e)
