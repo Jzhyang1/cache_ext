@@ -60,6 +60,9 @@ with open(logfile, "r") as f:
     pattern2 = re.compile(r'(\d+): Sched Switch - Prev PID: (\d+), Next PID: (\d+), Timestamp: (\d+)')
     for line in f:
         if pat := pattern1.match(line):
+            assert len(running_pids) != 0
+            assert len(alive_pids) != 0
+            
             addr_space, page = int(pat.group(2)), int(pat.group(3))
             n = len(running_pids)
             for pid in running_pids:
