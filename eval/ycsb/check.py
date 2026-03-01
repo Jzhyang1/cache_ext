@@ -31,8 +31,8 @@ argparser.add_argument('B', type=int, help='Number of future processes to consid
 
 args = argparser.parse_args()
 logfile = args.logfile
-A = args.A
-B = args.B
+A = int(args.A)
+B =int(args.B)
 
 # Error handling
 error_count = 0
@@ -60,7 +60,7 @@ with open(logfile, "r") as f:
     pattern2 = re.compile(r'(\d+): Sched Switch - Prev PID: (\d+), Next PID: (\d+), Timestamp: (\d+)')
     for line in f:
         if pat := pattern1.match(line):
-            addr_space, page = pat.group(2), pat.group(3)
+            addr_space, page = int(pat.group(2)), int(pat.group(3))
             n = len(running_pids)
             for pid in running_pids:
                 idx = (pid, addr_space, page)
@@ -69,7 +69,7 @@ with open(logfile, "r") as f:
                 idx = (pid, addr_space, page)
                 alive_scores[idx] = alive_scores.get(idx, 0) + 1/n
         elif pat := pattern2.match(line):
-            prev, nxt = pat.group(2), pat.group(3)
+            prev, nxt = int(pat.group(2)), int(pat.group(3))
             if prev in running_pids: running_pids.remove(prev)
             running_pids.add(nxt)
 
@@ -83,3 +83,10 @@ with open(logfile, "r") as f:
         else:
             perror("No match found for", line)
 
+# MSE calculation
+# Get the union of the sets of keys
+keys = {*running_scores.keys(), *alive_scores.keys()}
+total = 0
+for key in keys:
+    total += (running_scores.get(key, 0) - alive_scores.get(key, 0))**2
+print("MSE is", total/len(keys))
