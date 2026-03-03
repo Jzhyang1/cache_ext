@@ -224,7 +224,6 @@ class LevelDBBenchmark(BenchmarkFramework):
 
     def benchmark_cmd(self, config):
         bench_binary_dir = self.args.bench_binary_dir
-        leveldb_temp_db_dir = self.args.leveldb_temp_db
         bench_binary = os.path.join(bench_binary_dir, "run_leveldb")
 
         cmd = [
@@ -237,11 +236,26 @@ class LevelDBBenchmark(BenchmarkFramework):
             ":::",
         ]
 
-        for benchmark in config["benchmark"]:
+        def get_bench_file(benchmark):
             bench_file = "../leveldb/config/%s.yaml" % benchmark
-            bench_file = os.path.abspath(os.path.join(bench_binary_dir, bench_file))
-            if not os.path.exists(bench_file):
-                raise Exception("Benchmark file not found: %s" % bench_file)
+            return os.path.abspath(os.path.join(bench_binary_dir, bench_file))
+
+        counts = {}
+        for benchmark in config["benchmark"]:
+            original_file = get_bench_file(benchmark)
+            if not os.path.exists(original_file):
+                raise Exception("Benchmark file not found: %s" % original_file)
+            
+            if benchmark in counts:
+                new_file = get_bench_file("%s_%d" % (benchmark, counts[benchmark]))
+                run(["cp", original_file, new_file])
+                bench_file = new_file
+                leveldb_temp_db_dir = "%s_%d" % (self.args.leveldb_temp_db, counts[benchmark])
+            else: 
+                bench_file = original_file
+                leveldb_temp_db_dir = self.args.leveldb_temp_db
+
+            counts[benchmark] = counts.get(benchmark, 0) + 1
             with edit_yaml_file(bench_file) as bench_config:
                 bench_config["leveldb"]["data_dir"] = leveldb_temp_db_dir
                 bench_config["workload"]["runtime_seconds"] = config["runtime_seconds"]
