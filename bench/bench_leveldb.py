@@ -125,7 +125,6 @@ class LevelDBBenchmark(BenchmarkFramework):
                 "Whether to run benchmarks in parallel. If not set, benchmarks will be run sequentially."
                 "parallel processes will be run in the same cgroup to cause interference."
             ),
-            type=bool,
             default=False
         )
         parser.add_argument(
