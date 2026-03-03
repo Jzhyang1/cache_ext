@@ -45,9 +45,7 @@ fi
 #	We already support this in the bench script.
 for CLUSTER in "${CLUSTERS[@]}"; do
 	echo "Running policy: ${POLICY} on cluster ${CLUSTER}"
-	perf sched record -a -- \
 	python3 "$BENCH_PATH/bench_twitter_trace.py" \
-		--track-sched True \
 		--cpu 8 \
 		--policy-loader "$POLICY_PATH/${POLICY}.out" \
 		--results-file "$RESULTS_PATH/twitter_traces_${CLUSTER}_results.json" \
@@ -58,12 +56,6 @@ for CLUSTER in "${CLUSTERS[@]}"; do
 		--benchmark "twitter_cluster${CLUSTER}_bench"
 	if [ ! $? -eq 0 ]; then
 		echo "Cluster ${CLUSTER} failed. Please check the output for details."
-		exit 1
-	fi
-	perf script --ns -i perf.data > perf_${CLUSTER}.txt
-
-	if [ ! $? -eq 0 ]; then
-		echo "Failed to process perf data. This should not happen."
 		exit 1
 	fi
 done

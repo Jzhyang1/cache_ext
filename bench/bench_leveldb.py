@@ -119,6 +119,16 @@ class LevelDBBenchmark(BenchmarkFramework):
 
     def add_arguments(self, parser: argparse.ArgumentParser):
         parser.add_argument(
+            "--parallel",
+            action="store_true",
+            help= (
+                "Whether to run benchmarks in parallel. If not set, benchmarks will be run sequentially."
+                "parallel processes will be run in the same cgroup to cause interference."
+            ),
+            type=bool,
+            default=False
+        )
+        parser.add_argument(
             "--leveldb-db",
             type=str,
             required=True,
@@ -146,7 +156,7 @@ class LevelDBBenchmark(BenchmarkFramework):
             "--benchmark",
             type=str,
             required=True,
-            help="Specify the benchmark to run, e.g., 'ycsb_a,ycsb_b,'",
+            help="Specify the benchmark(s) to run, e.g., 'ycsb_a,ycsb_b,'",
         )
         parser.add_argument(
             "--fadvise-hints",
@@ -159,9 +169,16 @@ class LevelDBBenchmark(BenchmarkFramework):
         configs = add_config_option("enable_mmap", [False], configs)
         configs = add_config_option("runtime_seconds", [240], configs)
         configs = add_config_option("warmup_runtime_seconds", [45], configs)
-        configs = add_config_option(
-            "benchmark", parse_strings_string(self.args.benchmark), configs
-        )
+        if self.args.parallel:
+            # If running in parallel, put all benchmarks in the same config
+            configs = add_config_option(
+                "benchmark", [parse_strings_string(self.args.benchmark)], configs
+            )
+        else:
+            # group each benchmark into its own config to run sequentially
+            configs = add_config_option(
+                "benchmark", [[s] for s in parse_strings_string(self.args.benchmark)], configs
+            )
         configs = add_config_option("cgroup_size", [10 * GiB], configs)
         if self.args.default_only:
             configs = add_config_option(
@@ -210,24 +227,28 @@ class LevelDBBenchmark(BenchmarkFramework):
         bench_binary_dir = self.args.bench_binary_dir
         leveldb_temp_db_dir = self.args.leveldb_temp_db
         bench_binary = os.path.join(bench_binary_dir, "run_leveldb")
-        bench_file = "../leveldb/config/%s.yaml" % config["benchmark"]
-        bench_file = os.path.abspath(os.path.join(bench_binary_dir, bench_file))
-        if not os.path.exists(bench_file):
-            raise Exception("Benchmark file not found: %s" % bench_file)
-        with edit_yaml_file(bench_file) as bench_config:
-            bench_config["leveldb"]["data_dir"] = leveldb_temp_db_dir
-            bench_config["workload"]["runtime_seconds"] = config["runtime_seconds"]
-            bench_config["workload"]["warmup_runtime_seconds"] = config[
-                "warmup_runtime_seconds"
-            ]
+
         cmd = [
+            "parallel",
             "sudo",
             "cgexec",
             "-g",
             "memory:%s" % config["cgroup_name"],
-            bench_binary,
-            bench_file,
+            ":::",
         ]
+
+        for benchmark in config["benchmark"]:
+            bench_file = "../leveldb/config/%s.yaml" % benchmark
+            bench_file = os.path.abspath(os.path.join(bench_binary_dir, bench_file))
+            if not os.path.exists(bench_file):
+                raise Exception("Benchmark file not found: %s" % bench_file)
+            with edit_yaml_file(bench_file) as bench_config:
+                bench_config["leveldb"]["data_dir"] = leveldb_temp_db_dir
+                bench_config["workload"]["runtime_seconds"] = config["runtime_seconds"]
+                bench_config["workload"]["warmup_runtime_seconds"] = config[
+                    "warmup_runtime_seconds"
+                ]
+            cmd += ["%s %s" % (bench_binary, bench_file)]
         return cmd
 
     def cmd_extra_envs(self, config):

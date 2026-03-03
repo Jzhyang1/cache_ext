@@ -10,7 +10,7 @@ from abc import ABC, abstractmethod
 from contextlib import contextmanager, suppress
 from subprocess import CalledProcessError
 from time import sleep, time
-from typing import Dict, List, Union
+from typing import Dict, Iterable, List, Union
 
 from ruamel.yaml import YAML
 
@@ -34,9 +34,11 @@ class CacheExtPolicy:
         self.has_started = False
         self._policy_thread = None
 
-    def start(self, benchmark_name: str, cgroup_size: int = 0):
+    def start(self, benchmark_name: str | Iterable[str], cgroup_size: int = 0):
         if self.has_started:
             raise Exception("Policy already started")
+
+        print_benchmark_name = benchmark_name if isinstance(benchmark_name, str) else ",".join(benchmark_name)
 
         self.has_started = True
         cmd = [
@@ -47,7 +49,7 @@ class CacheExtPolicy:
             "--cgroup_path",
             self.cgroup_path,
             "--benchmark_name",
-            benchmark_name,
+            print_benchmark_name,
         ]
 
         if cgroup_size:
@@ -533,12 +535,6 @@ class BenchmarkFramework(ABC):
             default=1,
             help="Number of iterations to run for each config",
         )
-        parser.add_argument(
-            "--track-sched",
-            type=bool,
-            default=False,
-            help="Whether to track scheduler events during the benchmark",
-        )
         self.add_arguments(parser)
         return parser.parse_args()
 
@@ -599,16 +595,6 @@ class BenchmarkFramework(ABC):
             # Prepare environment for benchmarking
             self.benchmark_prepare(config)
 
-            if self.args.track_sched:
-                # Use `perf sched record` to track scheduler events during the benchmark
-                # Make sure it is in the background
-                perf_cmd = ["sudo","perf", "sched", "record"]
-                p = subprocess.Popen(
-                    perf_cmd, 
-                    stdout=subprocess.PIPE,
-                    stderr=subprocess.PIPE
-                )
-
             # Run benchmark
             cmd = self.benchmark_cmd(config)
 
@@ -650,10 +636,6 @@ class BenchmarkFramework(ABC):
                 raise e
 
             self.after_benchmark(config)
-
-            # End perf
-            if self.args.track_sched:
-                p.kill()
                 
             # Save results
             log.info("Parsing results...")
