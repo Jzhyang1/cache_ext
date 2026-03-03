@@ -228,8 +228,8 @@ class LevelDBBenchmark(BenchmarkFramework):
         bench_binary = os.path.join(bench_binary_dir, "run_leveldb")
 
         cmd = [
-            "parallel",
             "sudo",
+            "parallel",
             "cgexec",
             "-g",
             "memory:%s" % config["cgroup_name"],
