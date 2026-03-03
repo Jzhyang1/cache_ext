@@ -56,6 +56,8 @@ def generate_markov_model(logfile_ref):
     return ret
 
 def markov_select_next(model, addr):
+    if addr not in model:
+        return None
     miniret = model[addr]
     sel = random.random()
     for prob, ret in miniret:
@@ -79,12 +81,10 @@ def markov_model_log_files(logfile_ref, logfile_pred, cache_size, lookahead_size
             ref_addr = addr
             for _ in range(lookahead_size):
                 ref_addr = markov_select_next(model, ref_addr)
-                cache[ref_addr] = None
+                if ref_addr is not None:
+                    cache[ref_addr] = None
             total += 1
-
-    print(f"Total predicted accesses: {total}")
-    print(f"Cache hits: {hits}")
-    print(f"Hit rate: {hits / total:.2%}")
+    return hits, total
 
 def readahead_log_files(logfile_ref, logfile_pred, cache_size, lookahead_size):
     assert lookahead_size <= cache_size
@@ -104,10 +104,7 @@ def readahead_log_files(logfile_ref, logfile_pred, cache_size, lookahead_size):
                 ref_addr = (addr[0], addr[1] + i)
                 cache[ref_addr] = None
             total += 1
-
-    print(f"Total predicted accesses: {total}")
-    print(f"Cache hits: {hits}")
-    print(f"Hit rate: {hits / total:.2%}")
+    return hits, total
 
 def matching_log_files(logfile_ref, logfile_pred, cache_size, lookahead_size):
     assert lookahead_size <= cache_size
@@ -125,13 +122,10 @@ def matching_log_files(logfile_ref, logfile_pred, cache_size, lookahead_size):
             ref_addr = addr
             for _ in range(lookahead_size):
                 ref_addr = extract_page_access(model)
-                if ref_addr != None:
+                if ref_addr is not None:
                     cache[ref_addr] = None
             total += 1
-
-    print(f"Total predicted accesses: {total}")
-    print(f"Cache hits: {hits}")
-    print(f"Hit rate: {hits / total:.2%}")
+    return hits, total
 
 
 methods = {
@@ -150,9 +144,13 @@ if __name__ == "__main__":
 
     args = argparser.parse_args()
     
-    methods[args.method](
+    hits, total = methods[args.method](
         args.logfile_ref, 
         args.logfile_pred,
         args.size,
         args.lookahead
     )
+
+    print(f"Total accesses: {total}")
+    print(f"Cache hits: {hits}")
+    print(f"Hit rate: {hits / total:.2%}")
