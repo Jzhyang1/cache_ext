@@ -233,6 +233,7 @@ class LevelDBBenchmark(BenchmarkFramework):
             "cgexec",
             "-g",
             "memory:%s" % config["cgroup_name"],
+            bench_binary,
             ":::",
         ]
 
@@ -247,7 +248,7 @@ class LevelDBBenchmark(BenchmarkFramework):
                 bench_config["workload"]["warmup_runtime_seconds"] = config[
                     "warmup_runtime_seconds"
                 ]
-            cmd += ["'%s %s'" % (bench_binary, bench_file)]
+            cmd.append(bench_file)
         return cmd
 
     def cmd_extra_envs(self, config):
