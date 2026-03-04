@@ -20,14 +20,8 @@ ITERATIONS=3
 
 POLICY="cache_ext_logging"
 BENCHMARKS=(
-	"ycsb_a"
 	"ycsb_b"
-	"ycsb_c"
-	"ycsb_d"
-	"ycsb_e"
-	"ycsb_f"
-	"uniform"
-	"uniform_read_write"
+	"ycsb_b"
 )
 
 mkdir -p "$RESULTS_PATH"

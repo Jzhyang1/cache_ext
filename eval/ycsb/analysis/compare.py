@@ -4,7 +4,13 @@ import argparse
 import re
 import os
 import random
-from lru import LRU
+
+lru_imported = True
+try:
+    from lru import LRU
+except ImportError:
+    lru_imported = False
+    LRU = lambda x:dict()
 
 # Arguments to the program:
 # check.py <method> <logfile_ref> <logfile_pred> [--size cache_size] [--lookahead lookahead_size]
@@ -33,7 +39,8 @@ def extract_page_access(file):
             return None
         match = pattern.match(line)
         if match:
-            return (int(match.group(2)), int(match.group(3)))
+            # return (int(match.group(2)), int(match.group(3)))
+            return int(match.group(3))
 
 def generate_markov_model(logfile_ref):
     hist = {}    # maps {addr: {next_addr: count}}
@@ -42,17 +49,19 @@ def generate_markov_model(logfile_ref):
         while (addr := extract_page_access(f)) != None:
             minihist = hist.setdefault(prev_addr, {})
             minihist[addr] = minihist.get(addr, 0) + 1
+            prev_addr = addr
     # Compile hist into a map {addr: [(PDF, next_addr)]}
     ret = {}
     for addr, entries in hist.items():
         total = 0
-        for next_addr, count in entries:
+        for next_addr, count in entries.items():
             total += count
         accum, miniret = 0, []
-        for next_addr, count in entries:
+        for next_addr, count in entries.items():
             accum += count
             miniret.append((accum/total, next_addr))
         ret[addr] = miniret
+    print("model is of size", len(ret))
     return ret
 
 def markov_select_next(model, addr):
@@ -141,6 +150,7 @@ if __name__ == "__main__":
     argparser.add_argument('logfile_pred', type=str, help='Path to the predicted log file')
     argparser.add_argument('--size', type=int, default=1, help='Cache size in number of pages')
     argparser.add_argument('--lookahead', type=int, default=0, help='Lookahead size in number of pages')
+    argparser.add_argument('--ignore-lru', action='store_true', help='If LRU is not available, use a set for the cache (for testing purposes)')
 
     args = argparser.parse_args()
     
