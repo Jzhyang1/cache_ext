@@ -44,7 +44,7 @@ fi
 for BENCHMARK in "${BENCHMARKS[@]}"; do
 	echo "Running benchmark: ${BENCHMARK}"
 	python3 "$BENCH_PATH/bench_leveldb.py" \
-		--cpu 8 \
+		--cpu 1 \
 		--policy-loader "$POLICY_PATH/${POLICY}.out" \
 		--results-file "$RESULTS_PATH/ycsb_results.json" \
 		--leveldb-db "$DB_PATH" \

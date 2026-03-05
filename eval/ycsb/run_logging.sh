@@ -16,7 +16,7 @@ YCSB_PATH="$BASE_DIR/My-YCSB"
 DB_PATH=$(realpath "$BASE_DIR/../leveldb")
 RESULTS_PATH="$BASE_DIR/results"
 
-ITERATIONS=3
+ITERATIONS=2
 
 POLICY="cache_ext_logging"
 BENCHMARKS=(
@@ -50,7 +50,7 @@ fi
 for BENCHMARK in "${BENCHMARKS[@]}"; do
 	echo "Running benchmark: ${BENCHMARK}"
 	python3 "$BENCH_PATH/bench_leveldb.py" \
-		--cpu 8 \
+		--cpu 1 \
 		--policy-loader "$POLICY_PATH/${POLICY}.out" \
 		--results-file "$RESULTS_PATH/ycsb_results.json" \
 		--leveldb-db "$DB_PATH" \
