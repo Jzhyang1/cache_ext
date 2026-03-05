@@ -4,6 +4,7 @@ import argparse
 import re
 import os
 import random
+from rapidfuzz.distance import DamerauLevenshtein
 
 lru_imported = True
 try:
@@ -141,8 +142,22 @@ def matching_log_files(logfile_ref, logfile_pred, cache_size, lookahead_size):
             total += 1
     return hits, total
 
+def compare_log_files(logfile_ref, logfile_pred, cache_size, lookahead_size):
+    # Ignore cache_size and lookahead_size
+    # Just compare the addresses accessed via levenshtein distance
+    seq1 = []
+    seq2 = []
+    with open(logfile_ref, 'r') as f1, open(logfile_pred, 'r') as f2:
+        while (addr := extract_page_access(f1)) != None:
+            seq1.append(addr)
+        while (addr := extract_page_access(f2)) != None:
+            seq2.append(addr)
+    distance = DamerauLevenshtein.distance(seq1, seq2)
+    longer_length = max(len(seq1), len(seq2))
+    return longer_length - distance, longer_length
 
 methods = {
+    'compare': compare_log_files,
     'readahead': readahead_log_files,
     'model': markov_model_log_files,
     'matching': matching_log_files
