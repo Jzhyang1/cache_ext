@@ -148,6 +148,21 @@ methods = {
     'matching': matching_log_files
 }
 
+
+def resolve_log_file(path):
+    cache_path = '.analysis_cache.' + os.path.basename(path)
+    if os.path.exists(cache_path):
+        print(f"Using cached log file at {cache_path}")
+        return cache_path
+    else:
+        print(f"Resolving log file at {path} and caching to {cache_path}")
+        # We keep only those lines that are page accesses, to speed up future runs
+        with open(path, 'r') as src, open(cache_path, 'w') as dst:
+            for line in src:
+                if pattern.match(line):
+                    dst.write(line)
+        return cache_path
+
 if __name__ == "__main__":
     argparser = argparse.ArgumentParser(description='Process a log of scheduler and page activity and compute metrics.')
     argparser.add_argument('method', type=str, help='The method to run, can be one of the following: ' + ','.join(methods.keys()))
@@ -158,7 +173,11 @@ if __name__ == "__main__":
     argparser.add_argument('--ignore-lru', action='store_true', help='If LRU is not available, use a set for the cache (for testing purposes)')
 
     args = argparser.parse_args()
-    
+
+    # Resolve file paths (possibly cached)
+    args.logfile_ref = resolve_log_file(args.logfile_ref)
+    args.logfile_pred = resolve_log_file(args.logfile_pred)
+
     hits, total = methods[args.method](
         args.logfile_ref, 
         args.logfile_pred,
