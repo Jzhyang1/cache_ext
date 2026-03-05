@@ -4,14 +4,27 @@ import argparse
 import re
 import os
 import random
-from rapidfuzz.distance import DamerauLevenshtein
 
-lru_imported = True
+from typing import Any
+args : Any = None
+
+try:
+    from rapidfuzz.distance import DamerauLevenshtein
+except ImportError:
+    class DamerauLevenshteinMissing:
+        @staticmethod
+        def distance(a, b):
+            raise NotImplementedError("DamerauLevenshtein distance not available, please install rapidfuzz")
+    DamerauLevenshtein = DamerauLevenshteinMissing
+
 try:
     from lru import LRU
 except ImportError:
-    lru_imported = False
-    LRU = lambda x:dict()
+    def LRUMissing(size):
+        if args.ignore_lru:
+            return dict()
+        raise NotImplementedError("LRU cache not available, please install lru-dict or use --ignore-lru flag")
+    LRU = LRUMissing
 
 # Arguments to the program:
 # check.py <method> <logfile_ref> <logfile_pred> [--size cache_size] [--lookahead lookahead_size]
@@ -43,14 +56,14 @@ def extract_page_access(file):
             # return (int(match.group(2)), int(match.group(3)))
             return int(match.group(3))
 
-def generate_markov_model(logfile_ref):
+def generate_markov_model(logfile_ref, context_size):
     hist = {}    # maps {addr: {next_addr: count}}
     with open(logfile_ref, 'r') as f:
-        prev_addr = None
+        prev_addrs = [None] * context_size
         while (addr := extract_page_access(f)) != None:
-            minihist = hist.setdefault(prev_addr, {})
+            minihist = hist.setdefault(tuple(prev_addrs), {})
             minihist[addr] = minihist.get(addr, 0) + 1
-            prev_addr = addr
+            prev_addrs = prev_addrs[1:] + [addr]
     # Compile hist into a map {addr: [(PDF, next_addr)]}
     ret = {}
     for addr, entries in hist.items():
@@ -74,29 +87,32 @@ def markov_select_next(model, addr):
         if sel < prob: return ret
     return ret
 
-def markov_model_log_files(logfile_ref, logfile_pred, cache_size, lookahead_size):
+def markov_model_log_files(logfile_ref, logfile_pred, cache_size, lookahead_size, context_size):
     assert lookahead_size <= cache_size
-    model = generate_markov_model(logfile_ref)
+    model = generate_markov_model(logfile_ref, context_size)
     cache = LRU(cache_size)
     hits = 0
     total = 0
 
     with open(logfile_pred, 'r') as f:
+        prev_addrs = [None] * context_size
         while (addr := extract_page_access(f)) != None:
             if addr in cache:
                 hits += 1
             else:
                 cache[addr] = None
             
-            ref_addr = addr
+            prev_addrs = prev_addrs[1:] + [addr]
+            ref_addrs = tuple(prev_addrs)
             for _ in range(lookahead_size):
-                ref_addr = markov_select_next(model, ref_addr)
-                if ref_addr is not None:
-                    cache[ref_addr] = None
+                pred_addr = markov_select_next(model, ref_addrs)
+                if pred_addr is not None:
+                    cache[pred_addr] = None
+                ref_addrs = (*ref_addrs[1:], pred_addr)
             total += 1
     return hits, total
 
-def readahead_log_files(logfile_ref, logfile_pred, cache_size, lookahead_size):
+def readahead_log_files(logfile_ref, logfile_pred, cache_size, lookahead_size, **kwargs):
     assert lookahead_size <= cache_size
     cache = LRU(cache_size)
     hits = 0
@@ -111,12 +127,12 @@ def readahead_log_files(logfile_ref, logfile_pred, cache_size, lookahead_size):
             
             ref_addr = addr
             for i in range(lookahead_size):
-                ref_addr = (addr[0], addr[1] + i)
+                ref_addr = addr + i
                 cache[ref_addr] = None
             total += 1
     return hits, total
 
-def matching_log_files(logfile_ref, logfile_pred, cache_size, lookahead_size):
+def matching_log_files(logfile_ref, logfile_pred, cache_size, lookahead_size, **kwargs):
     assert lookahead_size <= cache_size
     cache = LRU(cache_size - lookahead_size)
     lookahead = LRU(lookahead_size)
@@ -142,7 +158,7 @@ def matching_log_files(logfile_ref, logfile_pred, cache_size, lookahead_size):
             total += 1
     return hits, total
 
-def compare_log_files(logfile_ref, logfile_pred, cache_size, lookahead_size):
+def compare_log_files(logfile_ref, logfile_pred, **kwargs):
     # Ignore cache_size and lookahead_size
     # Just compare the addresses accessed via levenshtein distance
     seq1 = []
@@ -183,8 +199,9 @@ if __name__ == "__main__":
     argparser.add_argument('method', type=str, help='The method to run, can be one of the following: ' + ','.join(methods.keys()))
     argparser.add_argument('logfile_ref', type=str, help='Path to the reference log file')
     argparser.add_argument('logfile_pred', type=str, help='Path to the predicted log file')
-    argparser.add_argument('--size', type=int, default=1, help='Cache size in number of pages')
-    argparser.add_argument('--lookahead', type=int, default=0, help='Lookahead size in number of pages')
+    argparser.add_argument('--size', '-s', type=int, default=1, help='Cache size in number of pages')
+    argparser.add_argument('--lookahead', '-l', type=int, default=0, help='Lookahead size in number of pages')
+    argparser.add_argument('--context-size', '-c', type=int, default=0, help='Context size for the Markov model (only used for the "model" method)')
     argparser.add_argument('--ignore-lru', action='store_true', help='If LRU is not available, use a set for the cache (for testing purposes)')
 
     args = argparser.parse_args()
@@ -196,8 +213,9 @@ if __name__ == "__main__":
     hits, total = methods[args.method](
         args.logfile_ref, 
         args.logfile_pred,
-        args.size,
-        args.lookahead
+        cache_size = args.size,
+        lookahead_size = args.lookahead,
+        context_size = args.context_size
     )
 
     print(f"Total accesses: {total}")
