@@ -122,17 +122,21 @@ def matching_log_files(logfile_ref, logfile_pred, cache_size, lookahead_size):
     total = 0
 
     with open(logfile_pred, 'r') as f, open(logfile_ref, 'r') as model:
+        # Populate the first lookahead_size entries of the model into the cache
+        for _ in range(lookahead_size):
+            ref_addr = extract_page_access(model)
+            if ref_addr is not None:
+                cache[ref_addr] = None
         while (addr := extract_page_access(f)) != None:
-            # Pretend like we prefetched first
-            for _ in range(lookahead_size):
-                ref_addr = extract_page_access(model)
-                if ref_addr is not None:
-                    cache[ref_addr] = None
-
             if addr in cache:
                 hits += 1
             else:
                 cache[addr] = None
+
+            # Prefetch
+            ref_addr = extract_page_access(model)
+            if ref_addr is not None:
+                cache[ref_addr] = None
             total += 1
     return hits, total
 
