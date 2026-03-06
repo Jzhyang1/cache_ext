@@ -147,7 +147,7 @@ int bpf_prog_sched_switch(struct trace_event_raw_sched_switch *ctx) {
 	};
 	
 	// Send the event to userspace via the ring buffer
-	bpf_ringbuf_output(&userspace_events, &event, sizeof(event), 0);
+	// bpf_ringbuf_output(&userspace_events, &event, sizeof(event), 0);
     
     return 0;
 }
