@@ -158,6 +158,25 @@ def matching_log_files(logfile_ref, logfile_pred, cache_size, lookahead_size, **
             total += 1
     return hits, total
 
+def sanity_check(logfile_ref, logfile_pred, **kwargs):
+    # Counts the missing access log entries in logfile_pred and logfile_ref
+    for logfile in [logfile_ref, logfile_pred]:
+        with open(logfile, 'r') as f:
+            start_n, cur_n, missing = None, 0, 0
+            while (line := f.readline()) != '':
+                match = pattern.match(line)
+                if not match:
+                    continue
+
+                got_n = int(match.group(1))
+                if start_n is None:
+                    start_n = got_n
+                else:
+                    missing += got_n - cur_n - 1
+                cur_n = got_n
+        if start_n is None: start_n = 0
+        print(f"Missing entries in {logfile} log: {missing} of {cur_n - start_n + 1} ({missing / (cur_n - start_n + 1):.2%})")
+
 def compare_log_files(logfile_ref, logfile_pred, **kwargs):
     # Ignore cache_size and lookahead_size
     # Just compare the addresses accessed via levenshtein distance
@@ -176,7 +195,8 @@ methods = {
     'compare': compare_log_files,
     'readahead': readahead_log_files,
     'model': markov_model_log_files,
-    'matching': matching_log_files
+    'matching': matching_log_files,
+    'sanity': sanity_check
 }
 
 
