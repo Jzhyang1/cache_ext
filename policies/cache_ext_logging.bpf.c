@@ -144,20 +144,20 @@ struct cache_ext_ops log_ops = {
 // Hook into the sched_switch tracepoint
 SEC("tracepoint/sched/sched_switch")
 int bpf_prog_sched_switch(struct trace_event_raw_sched_switch *ctx) {
-    // Read the PID of the next task being scheduled
-    pid_t next_pid = ctx->next_pid;
-    pid_t prev_pid = ctx->prev_pid;
+    // // Read the PID of the next task being scheduled
+    // pid_t next_pid = ctx->next_pid;
+    // pid_t prev_pid = ctx->prev_pid;
     
-    // Create an event to send to userspace
-	struct userspace_event event = {
-		.prev_pid = prev_pid,
-		.next_pid = next_pid,
-		.nr_event = __atomic_fetch_add(&access_count, 1, __ATOMIC_ACQ_REL),
-		.drop_count = drop_count,
-		.type = EVENT_SCHED_SWITCH,
-	};
+    // // Create an event to send to userspace
+	// struct userspace_event event = {
+	// 	.prev_pid = prev_pid,
+	// 	.next_pid = next_pid,
+	// 	.nr_event = __atomic_fetch_add(&access_count, 1, __ATOMIC_ACQ_REL),
+	// 	.drop_count = drop_count,
+	// 	.type = EVENT_SCHED_SWITCH,
+	// };
 	
-	// Send the event to userspace via the ring buffer
+	// // Send the event to userspace via the ring buffer
 	// bpf_ringbuf_output(&userspace_events, &event, sizeof(event), 0);
     
     return 0;
