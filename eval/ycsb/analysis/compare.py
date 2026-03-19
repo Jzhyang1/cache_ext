@@ -45,17 +45,6 @@ def perror(*args):
         print("MAX_ERROR_COUNT exceeded, stopping logging")
 
 
-pattern = re.compile(r'(\d+): Page Access - Address Space: (\d+), Page Index: (\d+), Timestamp: (\d+)')
-def extract_page_access(file):
-    while True:
-        line = file.readline()
-        if not line:
-            return None
-        match = pattern.match(line)
-        if match:
-            # return (int(match.group(2)), int(match.group(3)))
-            return int(match.group(3))
-
 def generate_markov_model(logfile_ref, context_size):
     hist = {}    # maps {addr: {next_addr: count}}
     with LogFile(logfile_ref) as f:
@@ -250,20 +239,6 @@ class LogFile:
         if self.file is not None:
             self.file.close()
 
-def get_log_file(path):
-    cache_path = '.analysis_cache.' + os.path.basename(path)
-    if os.path.exists(cache_path):
-        print(f"Using cached log file at {cache_path}")
-        return cache_path
-    else:
-        print(f"Resolving log file at {path} and caching to {cache_path}")
-        # We keep only those lines that are page accesses, to speed up future runs
-        with open(path, 'r') as src, open(cache_path, 'w') as dst:
-            for line in src:
-                if pattern.match(line):
-                    dst.write(line)
-        return cache_path
-
 if __name__ == "__main__":
     argparser = argparse.ArgumentParser(description='Process a log of scheduler and page activity and compute metrics.')
     argparser.add_argument('method', type=str, help='The method to run, can be one of the following: ' + ','.join(methods.keys()))
@@ -275,10 +250,6 @@ if __name__ == "__main__":
     argparser.add_argument('--ignore-lru', action='store_true', help='If LRU is not available, use a set for the cache (for testing purposes)')
 
     args = argparser.parse_args()
-
-    # Resolve file paths (possibly cached)
-    args.logfile_ref = get_log_file(args.logfile_ref)
-    args.logfile_pred = get_log_file(args.logfile_pred)
 
     hits, total = methods[args.method](
         args.logfile_ref, 
