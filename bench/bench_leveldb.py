@@ -164,7 +164,7 @@ class LevelDBBenchmark(BenchmarkFramework):
             help="Specify the fadvise hints to use for the baseline cgroup, e.g., ',SEQUENTIAL,NOREUSE,DONTNEED'",
         )
         parser.add_argument(
-            "--nr-threads",
+            "--nr-thread",
             type=str,
             required=False,
             help="Specify the number of threads to use for the benchmark, e.g., '1,4,8'",
@@ -180,8 +180,8 @@ class LevelDBBenchmark(BenchmarkFramework):
         configs = add_config_option("enable_mmap", [False], configs)
         configs = add_config_option("runtime_seconds", [240], configs)
         configs = add_config_option("warmup_runtime_seconds", [45], configs)
-        if self.args.nr_threads is not None:
-            configs = add_config_option("nr_threads", [parse_numbers_string(self.args.nr_threads)], configs)
+        if self.args.nr_thread is not None:
+            configs = add_config_option("nr_thread", [parse_numbers_string(self.args.nr_thread)], configs)
         if self.args.next_op_interval_ns is not None:
             configs = add_config_option('next_op_interval_ns', [parse_numbers_string(self.args.next_op_interval_ns)], configs)
         if self.args.parallel:
@@ -278,8 +278,8 @@ class LevelDBBenchmark(BenchmarkFramework):
                 bench_config["workload"]["warmup_runtime_seconds"] = config[
                     "warmup_runtime_seconds"
                 ]
-                if "nr_threads" in config:
-                    bench_config["workload"]["nr_threads"] = config["nr_threads"]
+                if "nr_thread" in config:
+                    bench_config["workload"]["nr_thread"] = config["nr_thread"]
                 if "next_op_interval_ns" in config:
                     bench_config["workload"]["next_op_interval_ns"] = config["next_op_interval_ns"]
             cmd.append(bench_file)
