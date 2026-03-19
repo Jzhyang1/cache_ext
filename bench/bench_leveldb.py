@@ -181,9 +181,9 @@ class LevelDBBenchmark(BenchmarkFramework):
         configs = add_config_option("runtime_seconds", [240], configs)
         configs = add_config_option("warmup_runtime_seconds", [45], configs)
         if self.args.nr_thread is not None:
-            configs = add_config_option("nr_thread", [parse_numbers_string(self.args.nr_thread)], configs)
+            configs = add_config_option("nr_thread", parse_numbers_string(self.args.nr_thread), configs)
         if self.args.next_op_interval_ns is not None:
-            configs = add_config_option('next_op_interval_ns', [parse_numbers_string(self.args.next_op_interval_ns)], configs)
+            configs = add_config_option('next_op_interval_ns', parse_numbers_string(self.args.next_op_interval_ns), configs)
         if self.args.parallel:
             # If running in parallel, put all benchmarks in the same config
             configs = add_config_option(
