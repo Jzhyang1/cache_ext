@@ -157,7 +157,7 @@ def sanity_check(logfile_ref, logfile_pred, **kwargs):
     # Counts the missing access log entries in logfile_pred and logfile_ref
     for logfile in [logfile_ref, logfile_pred]:
         with LogFile(logfile) as f:
-            start_n, cur_n, missing = None, 0, 0
+            start_n, cur_n, count = None, 0, 0
             source_says = 0
             for i, access in enumerate(f):
                 if i < 20:
@@ -167,11 +167,12 @@ def sanity_check(logfile_ref, logfile_pred, **kwargs):
                 source_says = access.drop_count
                 if start_n is None:
                     start_n = got_n
-                else:
-                    missing += got_n - cur_n - 1
+                count += 1
                 cur_n = got_n
         if start_n is None: start_n = 0
-        print(f"Missing entries in {logfile} log: {missing} of {cur_n - start_n + 1} ({missing / (cur_n - start_n + 1):.2%})")
+        range_n = cur_n - start_n + 1
+        missing = range_n - count
+        print(f"Missing entries in {logfile} log: {missing} of {range_n} ({missing / range_n:.2%})")
         print(f"Source says missing {source_says} of {cur_n} ({source_says / cur_n:.2%})")
     return 0, 1
 
