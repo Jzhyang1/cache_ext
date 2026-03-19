@@ -160,7 +160,7 @@ def sanity_check(logfile_ref, logfile_pred, **kwargs):
             start_n, cur_n, count = None, 0, 0
             source_says = 0
             for i, access in enumerate(f):
-                if i < 20:
+                if i < 20 or i % 1000 == 0:
                     print(access.nr_event, access.drop_count, access.address_space, access.page_index)
 
                 got_n = access.nr_event
