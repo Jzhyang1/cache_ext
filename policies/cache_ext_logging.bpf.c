@@ -108,7 +108,7 @@ void BPF_STRUCT_OPS(log_folio_accessed, struct folio *folio) {
     event->type = EVENT_PAGE_ACCESS;
 
     // 4. Commit the data to userspace
-    bpf_ringbuf_commit(event, 0);
+    bpf_ringbuf_submit(event, 0);
 }
 
 void BPF_STRUCT_OPS(log_folio_evicted, struct folio *folio) {
