@@ -83,21 +83,10 @@ uint64_t output_buffer_head = 0;
 static char log_filename[256];
 FILE *log_file;
 
-static int flush_events(struct userspace_event *buffer, size_t count) {
-	for (size_t i = 0; i < count; ++i) {
-		if (buffer[i].type == EVENT_PAGE_ACCESS) {
-			fprintf(log_file, "%lu: Page Access - Address Space: %llu, Page Index: %llu, Timestamp: %llu\n",
-				buffer[i].nr_event, buffer[i].address_space, buffer[i].index, buffer[i].timestamp);
-		} else if (buffer[i].type == EVENT_SCHED_SWITCH) {
-			fprintf(log_file, "%lu: Sched Switch - Prev PID: %llu, Next PID: %llu, Timestamp: %llu\n",
-				buffer[i].nr_event, buffer[i].prev_pid, buffer[i].next_pid, buffer[i].timestamp);
-		} else {
-			fprintf(log_file, "%lu: Unknown Event Type %u at Timestamp: %llu\n",
-				buffer[i].nr_event, buffer[i].type, buffer[i].timestamp);
-		}
-	}
-	return 0;
-}
+// static inline int flush_events(struct userspace_event *buffer, size_t count) {
+// 	fwrite(buffer, sizeof(struct userspace_event), count, log_file);
+// 	return 0;
+// }
 
 static int create_file() {
 	// first check if file exists, if it exists choose a different name
@@ -123,25 +112,37 @@ static uint32_t missing;
 
 static int handle_event(void *ctx, void *data, size_t data_sz) {
 	struct userspace_event *event = (struct userspace_event *)data;
-	output_buffer[active_buffer][output_buffer_head] = *event;
-
-	uint64_t next_index = (output_buffer_head + 1) % OUTPUT_EVENT_BUFFER_SIZE;
-	output_buffer_head = next_index;
 
 	// Track data loss
 	missing += event->nr_event - last_ordering - 1;
 	last_ordering = event->nr_event;
 
-	if (next_index == 0) {
-		// Buffer full, write to file
-		struct userspace_event *prev_buf = output_buffer[active_buffer];
-		active_buffer = 1 - active_buffer; // switch buffer
-
-		flush_events(prev_buf, OUTPUT_EVENT_BUFFER_SIZE);
-	}
-	
+	// Write event to file
+	fwrite(event, sizeof(struct userspace_event), 1, log_file);
 	return 0;
 }
+
+// static int handle_event(void *ctx, void *data, size_t data_sz) {
+// 	struct userspace_event *event = (struct userspace_event *)data;
+// 	output_buffer[active_buffer][output_buffer_head] = *event;
+
+// 	uint64_t next_index = (output_buffer_head + 1) % OUTPUT_EVENT_BUFFER_SIZE;
+// 	output_buffer_head = next_index;
+
+// 	// Track data loss
+// 	missing += event->nr_event - last_ordering - 1;
+// 	last_ordering = event->nr_event;
+
+// 	if (next_index == 0) {
+// 		// Buffer full, write to file
+// 		struct userspace_event *prev_buf = output_buffer[active_buffer];
+// 		active_buffer = 1 - active_buffer; // switch buffer
+
+// 		flush_events(prev_buf, OUTPUT_EVENT_BUFFER_SIZE);
+// 	}
+	
+// 	return 0;
+// }
 
 int main(int argc, char **argv) {
 	struct cmdline_args args = { 0 };

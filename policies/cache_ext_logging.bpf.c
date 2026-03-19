@@ -19,9 +19,9 @@ char _license[] SEC("license") = "GPL";
 #define EVENT_SCHED_SWITCH 1
 
 struct userspace_event {
-	u32 nr_event; // order of access
+	u64 nr_event; // order of access
 	u32 type; 	// 0 for access, 1 for sched switch
-	u64 timestamp;
+	u32 drop_count; // number of events dropped up to now due to buffer full
 	union {
 		struct {
 			u64 address_space;
@@ -45,6 +45,7 @@ struct {
 
 static u64 main_list;
 static u64 access_count;
+static u32 drop_count;
 
 static inline bool is_folio_relevant(struct folio *folio) {
 	if (!folio || !folio->mapping || !folio->mapping->host)
@@ -85,19 +86,29 @@ void BPF_STRUCT_OPS(log_evict_folios, struct cache_ext_eviction_ctx *eviction_ct
 	}
 }
 
-
 void BPF_STRUCT_OPS(log_folio_accessed, struct folio *folio) {
-	if (!is_folio_relevant(folio))
-		return;
+    if (!is_folio_relevant(folio))
+        return;
 
-	struct userspace_event event = {
-		.address_space = (u64)folio->mapping,
-		.index = folio->index,
-		.nr_event = __atomic_fetch_add(&access_count, 1, __ATOMIC_ACQ_REL),
-		.timestamp = bpf_ktime_get_ns(),
-		.type = EVENT_PAGE_ACCESS,
-	};
-	bpf_ringbuf_output(&userspace_events, &event, sizeof(event), 0);
+    // 1. Reserve space directly in the ring buffer
+    struct userspace_event *event = bpf_ringbuf_reserve(&userspace_events, sizeof(*event), 0);
+    
+    // 2. Check if reservation failed (buffer full)
+    if (!event) {
+        // 'dropped' counter map to track loss
+        __atomic_fetch_add(&drop_count, 1, __ATOMIC_ACQ_REL);
+        return;
+    }
+
+    // 3. Write directly to the reserved memory (Zero-Copy)
+    event->address_space = (u64)folio->mapping;
+    event->index = folio->index;
+    event->nr_event = __atomic_fetch_add(&access_count, 1, __ATOMIC_ACQ_REL);
+	event->drop_count = drop_count;
+    event->type = EVENT_PAGE_ACCESS;
+
+    // 4. Commit the data to userspace
+    bpf_ringbuf_commit(event, 0);
 }
 
 void BPF_STRUCT_OPS(log_folio_evicted, struct folio *folio) {
@@ -142,7 +153,7 @@ int bpf_prog_sched_switch(struct trace_event_raw_sched_switch *ctx) {
 		.prev_pid = prev_pid,
 		.next_pid = next_pid,
 		.nr_event = __atomic_fetch_add(&access_count, 1, __ATOMIC_ACQ_REL),
-		.timestamp = bpf_ktime_get_ns(),
+		.drop_count = drop_count,
 		.type = EVENT_SCHED_SWITCH,
 	};
 	
