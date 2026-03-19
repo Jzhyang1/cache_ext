@@ -76,9 +76,9 @@ struct userspace_event {
 
 #define OUTPUT_EVENT_BUFFER_SIZE 4096
 // double buffering for userspace events - we write to file in batches to reduce overhead, but we don't want to miss events while writing
-struct userspace_event output_buffer[OUTPUT_EVENT_BUFFER_SIZE][2];
-int active_buffer = 0;
-uint64_t output_buffer_head = 0;
+// struct userspace_event output_buffer[OUTPUT_EVENT_BUFFER_SIZE][2];
+// int active_buffer = 0;
+// uint64_t output_buffer_head = 0;
 
 static char log_filename[256];
 FILE *log_file;
@@ -238,7 +238,7 @@ int main(int argc, char **argv) {
 	}
 
 cleanup:
-	flush_events(output_buffer[active_buffer], output_buffer_head);
+	// flush_events(output_buffer[active_buffer], output_buffer_head);
 	if (events != NULL) ring_buffer__free(events);
 	if (log_file != NULL) fclose(log_file);
 	close(cgroup_fd);
