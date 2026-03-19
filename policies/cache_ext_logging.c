@@ -58,10 +58,10 @@ static int validate_watch_dir(const char *watch_dir, char *watch_dir_full_path) 
 #define EVENT_PAGE_ACCESS 0
 #define EVENT_SCHED_SWITCH 1
 
-struct userspace_event {
-	uint32_t nr_event; // order of access
+struct userspace_event { 
+	uint64_t nr_event; // order of access
 	uint32_t type; 	// 0 for access, 1 for sched switch
-	uint64_t timestamp; // time of access
+	uint32_t drop_count; // number of events dropped up to now due to buffer full
 	union {
 		struct {
 			uint64_t address_space;

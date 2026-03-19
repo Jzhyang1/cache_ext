@@ -58,9 +58,10 @@ def extract_page_access(file):
 
 def generate_markov_model(logfile_ref, context_size):
     hist = {}    # maps {addr: {next_addr: count}}
-    with open(logfile_ref, 'r') as f:
+    with LogFile(logfile_ref) as f:
         prev_addrs = [None] * context_size
-        while (addr := extract_page_access(f)) != None:
+        for access in f:
+            addr = access.page_index
             minihist = hist.setdefault(tuple(prev_addrs), {})
             minihist[addr] = minihist.get(addr, 0) + 1
             prev_addrs = prev_addrs[1:] + [addr]
@@ -94,9 +95,10 @@ def markov_model_log_files(logfile_ref, logfile_pred, cache_size, lookahead_size
     hits = 0
     total = 0
 
-    with open(logfile_pred, 'r') as f:
+    with LogFile(logfile_pred) as f:
         prev_addrs = [None] * context_size
-        while (addr := extract_page_access(f)) != None:
+        for access in f:
+            addr = access.page_index
             if addr in cache:
                 hits += 1
             else:
@@ -114,22 +116,25 @@ def markov_model_log_files(logfile_ref, logfile_pred, cache_size, lookahead_size
 
 def readahead_log_files(logfile_ref, logfile_pred, cache_size, lookahead_size, **kwargs):
     assert lookahead_size <= cache_size
-    cache = LRU(cache_size)
-    hits = 0
-    total = 0
 
-    with open(logfile_pred, 'r') as f:
-        while (addr := extract_page_access(f)) != None:
-            if addr in cache:
-                hits += 1
-            else:
-                cache[addr] = None
-            
-            ref_addr = addr
-            for i in range(lookahead_size):
-                ref_addr = addr + i
-                cache[ref_addr] = None
-            total += 1
+    for logfile in [logfile_ref, logfile_pred]:
+        cache = LRU(cache_size)
+        hits = 0
+        total = 0
+        with LogFile(logfile) as f:
+            for access in f:
+                addr = access.page_index
+                if addr in cache:
+                    hits += 1
+                else:
+                    cache[addr] = None
+                
+                ref_addr = addr
+                for i in range(lookahead_size):
+                    ref_addr = addr + i
+                    cache[ref_addr] = None
+                total += 1
+        print(f"Finished processing {logfile}, hits so far: {hits} out of {total} accesses ({hits / total:.2%} hit rate)")
     return hits, total
 
 def matching_log_files(logfile_ref, logfile_pred, cache_size, lookahead_size, **kwargs):
@@ -139,8 +144,9 @@ def matching_log_files(logfile_ref, logfile_pred, cache_size, lookahead_size, **
     hits = 0
     total = 0
 
-    with open(logfile_pred, 'r') as f, open(logfile_ref, 'r') as model:
+    with LogFile(logfile_pred) as f, LogFile(logfile_ref) as model:
         # Populate the first lookahead_size entries of the model into the cache
+        raise NotImplementedError("matching_log_files method is not implemented yet")
         for _ in range(lookahead_size):
             ref_addr = extract_page_access(model)
             if ref_addr is not None:
@@ -161,14 +167,12 @@ def matching_log_files(logfile_ref, logfile_pred, cache_size, lookahead_size, **
 def sanity_check(logfile_ref, logfile_pred, **kwargs):
     # Counts the missing access log entries in logfile_pred and logfile_ref
     for logfile in [logfile_ref, logfile_pred]:
-        with open(logfile, 'r') as f:
+        with LogFile(logfile) as f:
             start_n, cur_n, missing = None, 0, 0
-            while (line := f.readline()) != '':
-                match = pattern.match(line)
-                if not match:
-                    continue
-
-                got_n = int(match.group(1))
+            source_says = 0
+            for access in f:
+                got_n = access.nr_event
+                source_says = access.drop_count
                 if start_n is None:
                     start_n = got_n
                 else:
@@ -176,17 +180,17 @@ def sanity_check(logfile_ref, logfile_pred, **kwargs):
                 cur_n = got_n
         if start_n is None: start_n = 0
         print(f"Missing entries in {logfile} log: {missing} of {cur_n - start_n + 1} ({missing / (cur_n - start_n + 1):.2%})")
+        print(f"Source says missing {source_says} of {cur_n} ({source_says / cur_n:.2%})")
+    return 0, 1
 
 def compare_log_files(logfile_ref, logfile_pred, **kwargs):
     # Ignore cache_size and lookahead_size
     # Just compare the addresses accessed via levenshtein distance
     seq1 = []
     seq2 = []
-    with open(logfile_ref, 'r') as f1, open(logfile_pred, 'r') as f2:
-        while (addr := extract_page_access(f1)) != None:
-            seq1.append(addr)
-        while (addr := extract_page_access(f2)) != None:
-            seq2.append(addr)
+    with LogFile(logfile_ref) as f1, LogFile(logfile_pred) as f2:
+        seq1 = [access.page_index for access in f1]
+        seq2 = [access.page_index for access in f2]
     distance = DamerauLevenshtein.distance(seq1, seq2)
     longer_length = max(len(seq1), len(seq2))
     return longer_length - distance, longer_length
@@ -200,7 +204,53 @@ methods = {
 }
 
 
-def resolve_log_file(path):
+class LogEntry:
+    # every log entry is a 32-byte struct
+    # 0-8: nr_event
+    # 8-12: type (always 0)
+    # 12-16: drop_count
+    # 16-24: address_space
+    # 24-32: page_index
+    def __init__(self, nr_event, type, drop_count, address_space, page_index):
+        self.nr_event = nr_event
+        self.type = type
+        self.drop_count = drop_count
+        self.address_space = address_space
+        self.page_index = page_index
+
+class LogFileIterator:
+    def __init__(self, file):
+        self.file = file
+    
+    def __iter__(self):
+        return self
+    
+    def __next__(self):
+        data = self.file.read(32)
+        if not data:
+            raise StopIteration
+        nr_event = int.from_bytes(data[0:8], 'little')
+        type = int.from_bytes(data[8:12], 'little')
+        drop_count = int.from_bytes(data[12:16], 'little')
+        address_space = int.from_bytes(data[16:24], 'little')
+        page_index = int.from_bytes(data[24:32], 'little')
+        return LogEntry(nr_event, type, drop_count, address_space, page_index)
+
+class LogFile:
+    def __init__(self, path):
+        self.path = path
+        self.file = None
+    
+    def __enter__(self):
+        self.file = open(self.path, 'rb')
+        # return an iterable over the log entries
+        return LogFileIterator(self.file)
+    
+    def __exit__(self, exc_type, exc_value, traceback):
+        if self.file is not None:
+            self.file.close()
+
+def get_log_file(path):
     cache_path = '.analysis_cache.' + os.path.basename(path)
     if os.path.exists(cache_path):
         print(f"Using cached log file at {cache_path}")
@@ -227,8 +277,8 @@ if __name__ == "__main__":
     args = argparser.parse_args()
 
     # Resolve file paths (possibly cached)
-    args.logfile_ref = resolve_log_file(args.logfile_ref)
-    args.logfile_pred = resolve_log_file(args.logfile_pred)
+    args.logfile_ref = get_log_file(args.logfile_ref)
+    args.logfile_pred = get_log_file(args.logfile_pred)
 
     hits, total = methods[args.method](
         args.logfile_ref, 
