@@ -93,7 +93,7 @@ void BPF_STRUCT_OPS(log_folio_accessed, struct folio *folio) {
 	struct userspace_event event = {
 		.address_space = (u64)folio->mapping,
 		.index = folio->index,
-		.nr_event = access_count++,
+		.nr_event = __atomic_fetch_add(&access_count, 1, __ATOMIC_ACQ_REL),
 		.timestamp = bpf_ktime_get_ns(),
 		.type = EVENT_PAGE_ACCESS,
 	};
@@ -141,7 +141,7 @@ int bpf_prog_sched_switch(struct trace_event_raw_sched_switch *ctx) {
 	struct userspace_event event = {
 		.prev_pid = prev_pid,
 		.next_pid = next_pid,
-		.nr_event = access_count++,
+		.nr_event = __atomic_fetch_add(&access_count, 1, __ATOMIC_ACQ_REL),
 		.timestamp = bpf_ktime_get_ns(),
 		.type = EVENT_SCHED_SWITCH,
 	};

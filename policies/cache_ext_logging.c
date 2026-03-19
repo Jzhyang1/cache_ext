@@ -81,40 +81,45 @@ int active_buffer = 0;
 uint64_t output_buffer_head = 0;
 
 static char log_filename[256];
+FILE *log_file;
 
 static int flush_events(struct userspace_event *buffer, size_t count) {
-	FILE *f = fopen(log_filename, "a");
-	if (f == NULL) {
-		perror("Failed to open log file");
-		return -1;
-	}
-
 	for (size_t i = 0; i < count; ++i) {
 		if (buffer[i].type == EVENT_PAGE_ACCESS) {
-			fprintf(f, "%lu: Page Access - Address Space: %llu, Page Index: %llu, Timestamp: %llu\n",
+			fprintf(log_file, "%lu: Page Access - Address Space: %llu, Page Index: %llu, Timestamp: %llu\n",
 				buffer[i].nr_event, buffer[i].address_space, buffer[i].index, buffer[i].timestamp);
 		} else if (buffer[i].type == EVENT_SCHED_SWITCH) {
-			fprintf(f, "%lu: Sched Switch - Prev PID: %llu, Next PID: %llu, Timestamp: %llu\n",
+			fprintf(log_file, "%lu: Sched Switch - Prev PID: %llu, Next PID: %llu, Timestamp: %llu\n",
 				buffer[i].nr_event, buffer[i].prev_pid, buffer[i].next_pid, buffer[i].timestamp);
 		} else {
-			fprintf(f, "%lu: Unknown Event Type %u at Timestamp: %llu\n",
+			fprintf(log_file, "%lu: Unknown Event Type %u at Timestamp: %llu\n",
 				buffer[i].nr_event, buffer[i].type, buffer[i].timestamp);
 		}
 	}
-	fclose(f);
 	return 0;
 }
 
 static int create_file() {
 	// first check if file exists, if it exists choose a different name
 	for (int i = 0; ; ++i) {
-		snprintf(log_filename, sizeof(log_filename), "page_accesses_%d.log", i);
+		snprintf(log_filename, sizeof(log_filename), "kevents_%d.log", i);
 		if (access(log_filename, F_OK) == -1) {
 			break;
 		}
 	}
+
+	FILE *f = fopen(log_filename, "a");
+	if (f == NULL) {
+		perror("Failed to open log file");
+		return 1;
+	}
+	log_file = f;
+
 	return 0;
 }
+
+static uint32_t last_ordering;
+static uint32_t missing;
 
 static int handle_event(void *ctx, void *data, size_t data_sz) {
 	struct userspace_event *event = (struct userspace_event *)data;
@@ -123,7 +128,10 @@ static int handle_event(void *ctx, void *data, size_t data_sz) {
 	uint64_t next_index = (output_buffer_head + 1) % OUTPUT_EVENT_BUFFER_SIZE;
 	output_buffer_head = next_index;
 
-	// TODO consider putting this into a separate thread if writing to file becomes a bottleneck
+	// Track data loss
+	missing += event->nr_event - last_ordering - 1;
+	last_ordering = event->nr_event;
+
 	if (next_index == 0) {
 		// Buffer full, write to file
 		struct userspace_event *prev_buf = output_buffer[active_buffer];
@@ -231,6 +239,7 @@ int main(int argc, char **argv) {
 cleanup:
 	flush_events(output_buffer[active_buffer], output_buffer_head);
 	if (events != NULL) ring_buffer__free(events);
+	if (log_file != NULL) fclose(log_file);
 	close(cgroup_fd);
 	bpf_link__destroy(link);
 	cache_ext_logging_bpf__destroy(skel);
