@@ -137,39 +137,42 @@ def readahead_log_files(logfile_ref, logfile_pred, cache_size, lookahead_size, *
         print(f"Finished processing {logfile}, hits so far: {hits} out of {total} accesses ({hits / total:.2%} hit rate)")
     return hits, total
 
-def matching_log_files(logfile_ref, logfile_pred, cache_size, lookahead_size, **kwargs):
-    assert lookahead_size <= cache_size
-    cache = LRU(cache_size - lookahead_size)
-    lookahead = LRU(lookahead_size)
-    hits = 0
-    total = 0
+def matching_log_files(logfile_ref, logfile_pred, cache_size, lookahead_size, context_size, **kwargs):
+    actual_cache_size = cache_size - lookahead_size if cache_size > lookahead_size else 0
+    max_hits, max_total = 0, 0
+    for i in range(context_size):
+        cache = LRU(actual_cache_size)
+        lookahead = LRU(cache_size - actual_cache_size)
+        hits, total = 0, 0
 
-    with LogFile(logfile_pred) as f, LogFile(logfile_ref) as model:
-        # Populate the first lookahead_size entries of the model into the cache
-        model_iter = iter(model)
-        for _ in range(lookahead_size):
-            try:
-                ref_addr = next(model_iter).page_index
-                if ref_addr is not None:
-                    lookahead[ref_addr] = None
-            except StopIteration:
-                pass
-        for access in f:
-            addr = access.page_index
-            if addr in cache or addr in lookahead:
-                hits += 1
-            else:
-                cache[addr] = None
+        with LogFile(logfile_pred) as f, LogFile(logfile_ref) as model:
+            # Populate the first lookahead_size entries of the model into the cache
+            model_iter = iter(model)
+            for _ in range(lookahead_size + i):
+                try:
+                    ref_addr = next(model_iter).page_index
+                    if ref_addr is not None:
+                        lookahead[ref_addr] = None
+                except StopIteration:
+                    pass
+            for access in f:
+                addr = access.page_index
+                if addr in cache or addr in lookahead:
+                    hits += 1
+                else:
+                    cache[addr] = None
 
-            # Prefetch
-            try:
-                ref_addr = next(model_iter).page_index
-                if ref_addr is not None:
-                    lookahead[ref_addr] = None
-            except StopIteration:
-                pass
-            total += 1
-    return hits, total
+                # Prefetch
+                try:
+                    ref_addr = next(model_iter).page_index
+                    if ref_addr is not None:
+                        lookahead[ref_addr] = None
+                except StopIteration:
+                    pass
+                total += 1
+        if hits > max_hits:
+            max_hits, max_total = hits, total
+    return max_hits, max_total
 
 def sanity_check(logfile_ref, logfile_pred, **kwargs):
     # Counts the missing access log entries in logfile_pred and logfile_ref
@@ -265,7 +268,7 @@ if __name__ == "__main__":
     argparser.add_argument('logfile_pred', type=str, help='Path to the predicted log file')
     argparser.add_argument('--size', '-s', type=int, default=1, help='Cache size in number of pages')
     argparser.add_argument('--lookahead', '-l', type=int, default=0, help='Lookahead size in number of pages')
-    argparser.add_argument('--context-size', '-c', type=int, default=0, help='Context size for the Markov model (only used for the "model" method)')
+    argparser.add_argument('--context-size', '-c', type=int, default=1, help='Context size for the Markov model (only used for the "model" method)')
     argparser.add_argument('--ignore-lru', action='store_true', help='If LRU is not available, use a set for the cache (for testing purposes)')
 
     args = argparser.parse_args()
