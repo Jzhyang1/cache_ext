@@ -18,7 +18,19 @@ except ImportError:
     DamerauLevenshtein = DamerauLevenshteinMissing
 
 try:
-    from lru import LRU
+    class EmptyLRUDict:
+        def __setitem__(self, key, value):
+            pass
+        def __contains__(self, key):
+            return False
+        def __len__(self):
+            return 0
+    def LRU(size):
+        if size == 0:
+            return EmptyLRUDict()
+        from lru import LRU as LRUImpl
+        return LRUImpl(size)
+
 except ImportError:
     def LRUMissing(size):
         if args.ignore_lru:
@@ -135,21 +147,28 @@ def matching_log_files(logfile_ref, logfile_pred, cache_size, lookahead_size, **
 
     with LogFile(logfile_pred) as f, LogFile(logfile_ref) as model:
         # Populate the first lookahead_size entries of the model into the cache
-        raise NotImplementedError("matching_log_files method is not implemented yet")
+        model_iter = iter(model)
         for _ in range(lookahead_size):
-            ref_addr = extract_page_access(model)
-            if ref_addr is not None:
-                lookahead[ref_addr] = None
-        while (addr := extract_page_access(f)) != None:
+            try:
+                ref_addr = next(model_iter)
+                if ref_addr is not None:
+                    lookahead[ref_addr] = None
+            except StopIteration:
+                pass
+        for access in f:
+            addr = access.page_index
             if addr in cache or addr in lookahead:
                 hits += 1
             else:
                 cache[addr] = None
 
             # Prefetch
-            ref_addr = extract_page_access(model)
-            if ref_addr is not None:
-                lookahead[ref_addr] = None
+            try:
+                ref_addr = next(model_iter)
+                if ref_addr is not None:
+                    lookahead[ref_addr] = None
+            except StopIteration:
+                pass
             total += 1
     return hits, total
 
@@ -159,10 +178,7 @@ def sanity_check(logfile_ref, logfile_pred, **kwargs):
         with LogFile(logfile) as f:
             start_n, cur_n, count = None, 0, 0
             source_says = 0
-            for i, access in enumerate(f):
-                if i < 20 or i % 1000 == 0:
-                    print(access.nr_event, access.drop_count, access.address_space, access.page_index)
-
+            for access in f:
                 got_n = access.nr_event
                 source_says = access.drop_count
                 if start_n is None:
