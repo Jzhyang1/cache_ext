@@ -18,6 +18,7 @@ except ImportError:
     DamerauLevenshtein = DamerauLevenshteinMissing
 
 try:
+    from lru import LRU as LRUImpl
     class EmptyLRUDict:
         def __setitem__(self, key, value):
             pass
@@ -28,9 +29,7 @@ try:
     def LRU(size):
         if size == 0:
             return EmptyLRUDict()
-        from lru import LRU as LRUImpl
         return LRUImpl(size)
-
 except ImportError:
     def LRUMissing(size):
         if args.ignore_lru:
@@ -150,7 +149,7 @@ def matching_log_files(logfile_ref, logfile_pred, cache_size, lookahead_size, **
         model_iter = iter(model)
         for _ in range(lookahead_size):
             try:
-                ref_addr = next(model_iter)
+                ref_addr = next(model_iter).page_index
                 if ref_addr is not None:
                     lookahead[ref_addr] = None
             except StopIteration:
@@ -164,7 +163,7 @@ def matching_log_files(logfile_ref, logfile_pred, cache_size, lookahead_size, **
 
             # Prefetch
             try:
-                ref_addr = next(model_iter)
+                ref_addr = next(model_iter).page_index
                 if ref_addr is not None:
                     lookahead[ref_addr] = None
             except StopIteration:
