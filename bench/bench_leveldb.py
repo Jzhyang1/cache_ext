@@ -244,10 +244,9 @@ class LevelDBBenchmark(BenchmarkFramework):
 
         cmd = [
             "sudo",
-            "parallel",
-            "cgexec",
-            "-g",
-            "memory:%s" % config["cgroup_name"],
+            "parallel", "--joblog", "parallel_jobs.log", # Adds a log file
+            "--resume",  # Trick the parallel command to append to the log file instead of overwriting it
+            "cgexec", "-g", "memory:%s" % config["cgroup_name"],
             bench_binary,
             ":::",
         ]

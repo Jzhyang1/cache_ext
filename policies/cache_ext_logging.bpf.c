@@ -145,20 +145,27 @@ struct cache_ext_ops log_ops = {
 SEC("tracepoint/sched/sched_switch")
 int bpf_prog_sched_switch(struct trace_event_raw_sched_switch *ctx) {
     // // Read the PID of the next task being scheduled
-    // pid_t next_pid = ctx->next_pid;
-    // pid_t prev_pid = ctx->prev_pid;
+    pid_t next_pid = ctx->next_pid;
+    pid_t prev_pid = ctx->prev_pid;
     
-    // // Create an event to send to userspace
-	// struct userspace_event event = {
-	// 	.prev_pid = prev_pid,
-	// 	.next_pid = next_pid,
-	// 	.nr_event = __atomic_fetch_add(&access_count, 1, __ATOMIC_ACQ_REL),
-	// 	.drop_count = drop_count,
-	// 	.type = EVENT_SCHED_SWITCH,
-	// };
-	
-	// // Send the event to userspace via the ring buffer
-	// bpf_ringbuf_output(&userspace_events, &event, sizeof(event), 0);
+    // 1. Reserve space directly in the ring buffer
+    struct userspace_event *event = bpf_ringbuf_reserve(&userspace_events, sizeof(*event), 0);
     
+    // 2. Check if reservation failed (buffer full)
+    if (!event) {
+        // 'dropped' counter map to track loss
+        __atomic_fetch_add(&drop_count, 1, __ATOMIC_ACQ_REL);
+        return;
+    }
+
+    // 3. Write directly to the reserved memory (Zero-Copy)
+    event->prev_pid = prev_pid;
+    event->next_pid = next_pid;
+    event->nr_event = __atomic_fetch_add(&access_count, 1, __ATOMIC_ACQ_REL);
+	event->drop_count = drop_count;
+    event->type = EVENT_SCHED_SWITCH;
+
+    // 4. Commit the data to userspace
+    bpf_ringbuf_submit(event, 0);
     return 0;
 }
