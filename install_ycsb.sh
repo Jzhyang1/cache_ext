@@ -15,7 +15,7 @@ wget -O /tmp/yaml-cpp-0.8.0.zip https://github.com/jbeder/yaml-cpp/archive/refs/
 pushd /tmp
 unzip yaml-cpp-0.8.0.zip
 cd yaml-cpp-0.8.0
-mkdir build
+mkdir -p build
 cd build
 cmake ..
 make -j
@@ -28,6 +28,6 @@ if [[ ! -e "CMakeLists.txt" ]]; then
 fi
 
 echo "Building YCSB..."
-mkdir build
+mkdir -p build
 cd build
 cmake ..
