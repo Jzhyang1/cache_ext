@@ -41,23 +41,21 @@ if ! "$BASE_DIR/utils/disable-mglru.sh"; then
 fi
 
 # Baseline and cache_ext
-for BENCHMARK in "${BENCHMARKS[@]}"; do
-	echo "Running benchmark: ${BENCHMARK}"
-	python3 "$BENCH_PATH/bench_leveldb.py" \
-		--cpu 1 \
-		--nr-thread 1 \
-		--next-op-interval-ns 100 \
-		--policy-loader "$POLICY_PATH/${POLICY}.out" \
-		--results-file "$RESULTS_PATH/ycsb_results.json" \
-		--leveldb-db "$DB_PATH" \
-		--fadvise-hints "" \
-		--iterations "$ITERATIONS" \
-		--bench-binary-dir "$YCSB_PATH/build" \
-		--benchmark "$BENCHMARK"
-	if [ ! $? -eq 0 ]; then
-		echo "Benchmark ${BENCHMARK} failed. Please check the output for details."
-		exit 1
-	fi
-done
+echo "Running benchmark: ${BENCHMARKS}"
+python3 "$BENCH_PATH/bench_leveldb.py" \
+	--cpu 1 \
+	--nr-thread 1 \
+	--next-op-interval-ns 100 \
+	--policy-loader "$POLICY_PATH/${POLICY}.out" \
+	--results-file "$RESULTS_PATH/ycsb_results.json" \
+	--leveldb-db "$DB_PATH" \
+	--fadvise-hints "" \
+	--iterations "$ITERATIONS" \
+	--bench-binary-dir "$YCSB_PATH/build" \
+	--benchmark "$BENCHMARKS"
+if [ ! $? -eq 0 ]; then
+	echo "Benchmark ${BENCHMARKS} failed. Please check the output for details."
+	exit 1
+fi
 
 echo "YCSB benchmark completed. Results saved to $RESULTS_PATH."
