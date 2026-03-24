@@ -19,10 +19,7 @@ RESULTS_PATH="$BASE_DIR/results"
 ITERATIONS=1
 
 POLICY="cache_ext_logging"
-BENCHMARKS=(
-	"ycsb_b"
-	"ycsb_b"
-)
+BENCHMARKS="ycsb_b,ycsb_b"
 
 mkdir -p "$RESULTS_PATH"
 
@@ -52,6 +49,7 @@ python3 "$BENCH_PATH/bench_leveldb.py" \
 	--fadvise-hints "" \
 	--iterations "$ITERATIONS" \
 	--bench-binary-dir "$YCSB_PATH/build" \
+	--parallel \
 	--benchmark "$BENCHMARKS"
 if [ ! $? -eq 0 ]; then
 	echo "Benchmark ${BENCHMARKS} failed. Please check the output for details."

@@ -636,9 +636,6 @@ class BenchmarkFramework(ABC):
                 raise e
 
             self.after_benchmark(config)
-
-            log.info("Not parsing results...")
-            return []
                 
             # Save results
             log.info("Parsing results...")

@@ -155,7 +155,7 @@ int bpf_prog_sched_switch(struct trace_event_raw_sched_switch *ctx) {
     if (!event) {
         // 'dropped' counter map to track loss
         __atomic_fetch_add(&drop_count, 1, __ATOMIC_ACQ_REL);
-        return;
+        return 0;
     }
 
     // 3. Write directly to the reserved memory (Zero-Copy)

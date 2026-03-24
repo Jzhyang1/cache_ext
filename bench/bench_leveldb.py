@@ -227,8 +227,19 @@ class LevelDBBenchmark(BenchmarkFramework):
         )
         return configs
 
+    def get_leveldb_temp_db(self, config, i):
+        if len(config["benchmark"]) == 1:
+            return self.args.leveldb_temp_db
+        else:
+            return os.path.join(self.args.leveldb_temp_db, str(i))
+
     def benchmark_prepare(self, config):
-        reset_database(self.args.leveldb_db, self.args.leveldb_temp_db)
+        leveldb_temp_dbs = []
+        for i in range(len(config["benchmark"])):
+            inner_leveldb_temp_db = self.get_leveldb_temp_db(config, i)
+            leveldb_temp_dbs.append(inner_leveldb_temp_db)
+            reset_database(self.args.leveldb_db, inner_leveldb_temp_db)
+
         drop_page_cache()
         disable_swap()
         disable_smt()
@@ -241,11 +252,16 @@ class LevelDBBenchmark(BenchmarkFramework):
     def benchmark_cmd(self, config):
         bench_binary_dir = self.args.bench_binary_dir
         bench_binary = os.path.join(bench_binary_dir, "run_leveldb")
+        
+        log_file = "parallel_jobs"
+        i = 0
+        while os.path.exists(f'{log_file}_{i}.log'):
+            i += 1
+        log_file = f'{log_file}_{i}.log'
 
         cmd = [
             "sudo",
-            "parallel", "--joblog", "parallel_jobs.log", # Adds a log file
-            "--resume",  # Trick the parallel command to append to the log file instead of overwriting it
+            "parallel", "--joblog", log_file, # Adds a log file
             "cgexec", "-g", "memory:%s" % config["cgroup_name"],
             bench_binary,
             ":::",
@@ -256,7 +272,7 @@ class LevelDBBenchmark(BenchmarkFramework):
             return os.path.abspath(os.path.join(bench_binary_dir, bench_file))
 
         counts = {}
-        for benchmark in config["benchmark"]:
+        for i, benchmark in enumerate(config["benchmark"]):
             original_file = get_bench_file(benchmark)
             if not os.path.exists(original_file):
                 raise Exception("Benchmark file not found: %s" % original_file)
@@ -265,14 +281,12 @@ class LevelDBBenchmark(BenchmarkFramework):
                 new_file = get_bench_file("%s_%d" % (benchmark, counts[benchmark]))
                 run(["cp", original_file, new_file])
                 bench_file = new_file
-                leveldb_temp_db_dir = "%s_%d" % (self.args.leveldb_temp_db, counts[benchmark])
             else: 
                 bench_file = original_file
-                leveldb_temp_db_dir = self.args.leveldb_temp_db
 
             counts[benchmark] = counts.get(benchmark, 0) + 1
             with edit_yaml_file(bench_file) as bench_config:
-                bench_config["leveldb"]["data_dir"] = leveldb_temp_db_dir
+                bench_config["leveldb"]["data_dir"] = self.get_leveldb_temp_db(config, i)
                 bench_config["workload"]["runtime_seconds"] = config["runtime_seconds"]
                 bench_config["workload"]["warmup_runtime_seconds"] = config[
                     "warmup_runtime_seconds"

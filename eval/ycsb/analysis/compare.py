@@ -55,12 +55,18 @@ def perror(*args):
     elif error_count == MAX_ERROR_COUNT:
         print("MAX_ERROR_COUNT exceeded, stopping logging")
 
+def print_hit_miss(hits, total):
+    print(f"Total accesses: {total}")
+    print(f"Cache hits: {hits}")
+    print(f"Hit rate: {hits / total:.2%}")
 
 def generate_markov_model(logfile_ref, context_size):
     hist = {}    # maps {addr: {next_addr: count}}
-    with LogFile(logfile_ref) as f:
+    with LogFileRead(logfile_ref) as f:
         prev_addrs = [None] * context_size
         for access in f:
+            if access.type != 0:
+                continue
             addr = access.page_index
             minihist = hist.setdefault(tuple(prev_addrs), {})
             minihist[addr] = minihist.get(addr, 0) + 1
@@ -95,9 +101,11 @@ def markov_model_log_files(logfile_ref, logfile_pred, cache_size, lookahead_size
     hits = 0
     total = 0
 
-    with LogFile(logfile_pred) as f:
+    with LogFileRead(logfile_pred) as f:
         prev_addrs = [None] * context_size
         for access in f:
+            if access.type != 0:
+                continue
             addr = access.page_index
             if addr in cache:
                 hits += 1
@@ -112,7 +120,61 @@ def markov_model_log_files(logfile_ref, logfile_pred, cache_size, lookahead_size
                     cache[pred_addr] = None
                 ref_addrs = (*ref_addrs[1:], pred_addr)
             total += 1
-    return hits, total
+    print_hit_miss(hits, total)
+
+def sched_aware_markov_model_log_files(logfile_ref, logfile_pred, cache_size, lookahead_size, context_size):
+    # Get all PIDs and for each, build up a list of page accesses from when the PID was certainly active
+    cached_pid_list = f'{logfile_pred}.pids.log'
+    if os.path.exists(cached_pid_list):
+        with open(cached_pid_list, 'r') as f:
+            all_pids = set([int(line.strip()) for line in f.readlines()])
+    else:
+        active_pids = set()
+        pid_activities = {}  # maps to count of page accesses while each pid is active
+        with LogFileRead(logfile_pred) as f:
+            for access in f:
+                if access.type == 1:
+                    # page_index is dst pid for type == 1
+                    active_pids.discard(access.address_space)
+                    active_pids.add(access.page_index)
+                elif access.type == 0:
+                    for pid in active_pids:
+                        pid_activities[pid] = pid_activities.get(pid, 0) + 1
+        # We don't want OS activities counted in our simulation
+        all_pids = [pid for pid, count in pid_activities.items() if count > 1000]
+        with open(cached_pid_list, 'w') as f:
+            for pid in all_pids:
+                f.write(f'{pid}\n')
+
+    print("Number of possible PIDs:", len(all_pids))
+    if len(all_pids) > 20:
+        print("Error: too many possible PIDs")
+        raise Exception()
+
+    pid_caches = {
+        pid:LogFileWrite(f'{logfile_pred}.{pid}.log') for pid in all_pids
+    }
+    # run through the file again to sort entries into cache files
+    if not all(f.exists() for _, f in pid_caches.items()):
+        pid_writes = {
+            pid:f.__enter__() for pid, f in pid_caches.items()
+        }
+        active_pids = set()
+        with LogFileRead(logfile_pred) as f:
+            for access in f:
+                if access.type == 1:
+                    # page_index is dst pid for type == 1
+                    active_pids.discard(access.address_space)
+                    active_pids.add(access.page_index)
+                elif access.type == 0:
+                    for pid in active_pids:
+                        if pid in pid_writes:
+                            pid_writes[pid](access.nr_event, access.type, access.drop_count, access.address_space, access.page_index)
+    for pid, cache_file in pid_caches.items():
+        cache_file.__exit__(None, None, None)
+        print("[", pid, "]")
+        markov_model_log_files(logfile_ref, cache_file.path, cache_size, lookahead_size, context_size)
+
 
 def readahead_log_files(logfile_ref, logfile_pred, cache_size, lookahead_size, **kwargs):
     assert lookahead_size <= cache_size
@@ -121,7 +183,7 @@ def readahead_log_files(logfile_ref, logfile_pred, cache_size, lookahead_size, *
         cache = LRU(cache_size)
         hits = 0
         total = 0
-        with LogFile(logfile) as f:
+        with LogFileRead(logfile) as f:
             for access in f:
                 addr = access.page_index
                 if addr in cache:
@@ -145,7 +207,7 @@ def matching_log_files(logfile_ref, logfile_pred, cache_size, lookahead_size, co
         lookahead = LRU(cache_size - actual_cache_size)
         hits, total = 0, 0
 
-        with LogFile(logfile_pred) as f, LogFile(logfile_ref) as model:
+        with LogFileRead(logfile_pred) as f, LogFileRead(logfile_ref) as model:
             # Populate the first lookahead_size entries of the model into the cache
             model_iter = iter(model)
             for _ in range(lookahead_size + i):
@@ -172,12 +234,12 @@ def matching_log_files(logfile_ref, logfile_pred, cache_size, lookahead_size, co
                 total += 1
         if hits > max_hits:
             max_hits, max_total = hits, total
-    return max_hits, max_total
+    print_hit_miss(max_hits, max_total)
 
 def sanity_check(logfile_ref, logfile_pred, **kwargs):
     # Counts the missing access log entries in logfile_pred and logfile_ref
     for logfile in [logfile_ref, logfile_pred]:
-        with LogFile(logfile) as f:
+        with LogFileRead(logfile) as f:
             start_n, cur_n, count = None, 0, 0
             source_says = 0
             for access in f:
@@ -192,24 +254,24 @@ def sanity_check(logfile_ref, logfile_pred, **kwargs):
         missing = range_n - count
         print(f"Missing entries in {logfile} log: {missing} of {range_n} ({missing / range_n:.2%})")
         print(f"Source says missing {source_says} of {cur_n} ({source_says / cur_n:.2%})")
-    return 0, 1
 
 def compare_log_files(logfile_ref, logfile_pred, **kwargs):
     # Ignore cache_size and lookahead_size
     # Just compare the addresses accessed via levenshtein distance
     seq1 = []
     seq2 = []
-    with LogFile(logfile_ref) as f1, LogFile(logfile_pred) as f2:
+    with LogFileRead(logfile_ref) as f1, LogFileRead(logfile_pred) as f2:
         seq1 = [access.page_index for access in f1]
         seq2 = [access.page_index for access in f2]
     distance = DamerauLevenshtein.distance(seq1, seq2)
     longer_length = max(len(seq1), len(seq2))
-    return longer_length - distance, longer_length
+    print_hit_miss(longer_length - distance, longer_length)
 
 methods = {
     'compare': compare_log_files,
     'readahead': readahead_log_files,
     'model': markov_model_log_files,
+    'smodel': sched_aware_markov_model_log_files,
     'matching': matching_log_files,
     'sanity': sanity_check
 }
@@ -247,15 +309,33 @@ class LogFileIterator:
         page_index = int.from_bytes(data[24:32], 'little')
         return LogEntry(nr_event, type, drop_count, address_space, page_index)
 
-class LogFile:
+class LogFileRead:
     def __init__(self, path):
         self.path = path
         self.file = None
-    
     def __enter__(self):
         self.file = open(self.path, 'rb')
         # return an iterable over the log entries
         return LogFileIterator(self.file)
+    def __exit__(self, exc_type, exc_value, traceback):
+        if self.file is not None:
+            self.file.close()
+
+class LogFileWrite:
+    def __init__(self, path):
+        self.path = path
+        self.file = None
+    def exists(self):
+        return os.path.exists(self.path)
+    def __enter__(self):
+        self.file = open(self.path, 'wb')
+        def write_entry(nr_event, type, drop_count, address_space, page_index):
+            self.file.write(nr_event.to_bytes(8, 'little') +
+                    type.to_bytes(4, 'little') +
+                    drop_count.to_bytes(4, 'little') +
+                    address_space.to_bytes(8, 'little') +
+                    page_index.to_bytes(8, 'little'))
+        return write_entry 
     
     def __exit__(self, exc_type, exc_value, traceback):
         if self.file is not None:
@@ -273,14 +353,10 @@ if __name__ == "__main__":
 
     args = argparser.parse_args()
 
-    hits, total = methods[args.method](
+    methods[args.method](
         args.logfile_ref, 
         args.logfile_pred,
         cache_size = args.size,
         lookahead_size = args.lookahead,
         context_size = args.context_size
     )
-
-    print(f"Total accesses: {total}")
-    print(f"Cache hits: {hits}")
-    print(f"Hit rate: {hits / total:.2%}")
