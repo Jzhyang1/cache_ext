@@ -141,7 +141,7 @@ def sched_aware_markov_model_log_files(logfile_ref, logfile_pred, cache_size, lo
                     for pid in active_pids:
                         pid_activities[pid] = pid_activities.get(pid, 0) + 1
         # We don't want OS activities counted in our simulation
-        all_pids = [pid for pid, count in pid_activities.items() if count > 1000]
+        all_pids = [pid for pid, count in pid_activities.items() if count > 10000]
         with open(cached_pid_list, 'w') as f:
             for pid in all_pids:
                 f.write(f'{pid}\n')
@@ -239,6 +239,7 @@ def matching_log_files(logfile_ref, logfile_pred, cache_size, lookahead_size, co
 def sanity_check(logfile_ref, logfile_pred, **kwargs):
     # Counts the missing access log entries in logfile_pred and logfile_ref
     for logfile in [logfile_ref, logfile_pred]:
+        if logfile is None: continue
         with LogFileRead(logfile) as f:
             start_n, cur_n, count = None, 0, 0
             source_says = 0
@@ -345,7 +346,7 @@ if __name__ == "__main__":
     argparser = argparse.ArgumentParser(description='Process a log of scheduler and page activity and compute metrics.')
     argparser.add_argument('method', type=str, help='The method to run, can be one of the following: ' + ','.join(methods.keys()))
     argparser.add_argument('logfile_ref', type=str, help='Path to the reference log file')
-    argparser.add_argument('logfile_pred', type=str, help='Path to the predicted log file')
+    argparser.add_argument('logfile_pred', type=str, default=None, help='Path to the predicted log file')
     argparser.add_argument('--size', '-s', type=int, default=1, help='Cache size in number of pages')
     argparser.add_argument('--lookahead', '-l', type=int, default=0, help='Lookahead size in number of pages')
     argparser.add_argument('--context-size', '-c', type=int, default=1, help='Context size for the Markov model (only used for the "model" method)')
