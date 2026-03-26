@@ -175,11 +175,25 @@ class LevelDBBenchmark(BenchmarkFramework):
             required=False,
             help="Specify the interval between operations in nanoseconds, e.g., '0,1000000'",
         )
+        parser.add_argument(
+            "--warmup-runtime-seconds",
+            type=int,
+            default=240,
+            required=False,
+            help="Number of seconds for the YCSB workload to run each epoch"
+        )
+        parser.add_argument(
+            "--runtime-seconds",
+            type=int,
+            default=45,
+            required=False,
+            help="Number of seconds for the YCSB workload to run each epoch"
+        )
 
     def generate_configs(self, configs: List[Dict]) -> List[Dict]:
         configs = add_config_option("enable_mmap", [False], configs)
-        configs = add_config_option("runtime_seconds", [240], configs)
-        configs = add_config_option("warmup_runtime_seconds", [45], configs)
+        configs = add_config_option("runtime_seconds", [self.args.runtime_seconds], configs)
+        configs = add_config_option("warmup_runtime_seconds", [self.args.warmup_runtime_seconds], configs)
         if self.args.nr_thread is not None:
             configs = add_config_option("nr_thread", parse_numbers_string(self.args.nr_thread), configs)
         if self.args.next_op_interval_ns is not None:
@@ -278,6 +292,7 @@ class LevelDBBenchmark(BenchmarkFramework):
                 raise Exception("Benchmark file not found: %s" % original_file)
             
             if benchmark in counts:
+                # Copy and rename those sharing the same name
                 new_file = get_bench_file("%s_%d" % (benchmark, counts[benchmark]))
                 run(["cp", original_file, new_file])
                 bench_file = new_file
@@ -288,9 +303,7 @@ class LevelDBBenchmark(BenchmarkFramework):
             with edit_yaml_file(bench_file) as bench_config:
                 bench_config["leveldb"]["data_dir"] = self.get_leveldb_temp_db(config, i)
                 bench_config["workload"]["runtime_seconds"] = config["runtime_seconds"]
-                bench_config["workload"]["warmup_runtime_seconds"] = config[
-                    "warmup_runtime_seconds"
-                ]
+                bench_config["workload"]["warmup_runtime_seconds"] = config["warmup_runtime_seconds"]
                 if "nr_thread" in config:
                     bench_config["workload"]["nr_thread"] = config["nr_thread"]
                 if "next_op_interval_ns" in config:

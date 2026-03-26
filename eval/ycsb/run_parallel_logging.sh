@@ -43,6 +43,8 @@ python3 "$BENCH_PATH/bench_leveldb.py" \
 	--cpu 1 \
 	--nr-thread 1 \
 	--next-op-interval-ns 100 \
+	--warmup-runtime-seconds 135 \
+	--runtime-seconds 720 \
 	--policy-loader "$POLICY_PATH/${POLICY}.out" \
 	--results-file "$RESULTS_PATH/ycsb_results.json" \
 	--leveldb-db "$DB_PATH" \
