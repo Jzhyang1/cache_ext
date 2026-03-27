@@ -22,23 +22,24 @@ def cache_log_file(logfile, pid_admit_set: set[int]):
                 if active_count > 0:
                     g(access.nr_event, access.type, access.drop_count, access.address_space, access.page_index)
 
-def first_instance_of_pid(logfile, pid):
+def first_instance_of_pid(logfile, pids: set[int]):
     from compare import LogFileRead
     with LogFileRead(logfile) as f:
+        firsts: dict[int, int | None] = {pid: None for pid in pids}
         for access in f:
-            if access.address_space == pid:
-                return access.nr_event
-    return None
+            if access.page_index in pids and firsts[access.page_index] is None:
+                firsts[access.page_index] = access.nr_event
+        return firsts
 
-def last_instance_of_pid(logfile, pid):
+def last_instance_of_pid(logfile, pids: set[int]):
     from compare import LogFileRead
     with LogFileRead(logfile) as f:
-        last = None
+        lasts: dict[int, int | None] = {pid: None for pid in pids}
         for access in f:
-            if access.address_space == pid:
-                last = access.nr_event
-        return last
-    
+            if access.page_index in pids:
+                lasts[access.page_index] = access.nr_event
+        return lasts
+
 ops = {
     'cache': cache_log_file,
     'first': first_instance_of_pid,
@@ -56,6 +57,6 @@ if __name__ == '__main__':
     if args.operation == 'cache':
         cache_log_file(args.logfile, set(map(int, args.pids)))
     else:
-        for pid in args.pids:
-            result = ops[args.operation](args.logfile, pid)
-            print(f'{args.operation} of PID {pid}: {result}')
+        result = ops[args.operation](args.logfile, set(map(int, args.pids)))
+        for pid, event in result.items():
+            print(f'{args.operation} of PID {pid}: {event}')
