@@ -28,4 +28,4 @@ if __name__ == '__main__':
     parser.add_argument('logfile', type=str, help='log file to cache')
     parser.add_argument('pids', type=int, nargs='+', help='PIDs to admit')
     args = parser.parse_args()
-    cache_log_file(args.logfile, set(args.pids))
+    cache_log_file(args.logfile, set(map(int, args.pids)))
