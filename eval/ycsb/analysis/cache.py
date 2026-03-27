@@ -22,28 +22,32 @@ def cache_log_file(logfile, pid_admit_set: set[int]):
                 if active_count > 0:
                     g(access.nr_event, access.type, access.drop_count, access.address_space, access.page_index)
 
-def first_instance_of_pid(logfile, pids: set[int]):
+def first_last_instance_of_pid(logfile, pids: set[int]):
     from compare import LogFileRead
     with LogFileRead(logfile) as f:
         firsts: dict[int, int | None] = {pid: None for pid in pids}
-        for access in f:
-            if access.page_index in pids and firsts[access.page_index] is None:
-                firsts[access.page_index] = access.nr_event
-        return firsts
-
-def last_instance_of_pid(logfile, pids: set[int]):
-    from compare import LogFileRead
-    with LogFileRead(logfile) as f:
         lasts: dict[int, int | None] = {pid: None for pid in pids}
         for access in f:
             if access.page_index in pids:
+                if firsts[access.page_index] is None:
+                    firsts[access.page_index] = access.nr_event
                 lasts[access.page_index] = access.nr_event
-        return lasts
+        return firsts, lasts
+
+def print_head(logfile, counts: set[int]):
+    from compare import LogFileRead
+    assert len(counts) == 1
+    count = next(iter(counts))
+    with LogFileRead(logfile) as f:
+        for i, access in enumerate(f):
+            if i >= count:
+                break
+            print("addr:", access.address_space, "page_index:", access.page_index)
 
 ops = {
     'cache': cache_log_file,
-    'first': first_instance_of_pid,
-    'last': last_instance_of_pid,
+    'first-last': first_last_instance_of_pid,
+    'print': print_head,
 }
 
 if __name__ == '__main__':
@@ -56,7 +60,9 @@ if __name__ == '__main__':
 
     if args.operation == 'cache':
         cache_log_file(args.logfile, set(map(int, args.pids)))
-    else:
+    elif args.operation == 'first-last':
         result = ops[args.operation](args.logfile, set(map(int, args.pids)))
-        for pid, event in result.items():
-            print(f'{args.operation} of PID {pid}: {event}')
+        for pid, (first, last) in result.items():
+            print(f'{args.operation} of PID {pid}: first={first}, last={last}')
+    elif args.operation == 'print':
+        print_head(args.logfile, set(map(int, args.pids)))
