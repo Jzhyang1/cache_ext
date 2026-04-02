@@ -8,7 +8,7 @@ import subprocess
 import sys
 from abc import ABC, abstractmethod
 from contextlib import contextmanager, suppress
-from subprocess import CalledProcessError
+from subprocess import CalledProcessError, Popen
 from time import sleep, time
 from typing import Dict, Iterable, List, Union
 
@@ -34,11 +34,12 @@ class CacheExtPolicy:
         self.has_started = False
         self._policy_thread = None
 
-    def start(self, benchmark_name: str | Iterable[str], cgroup_size: int = 0):
+    def start(self, benchmark_name: str | Iterable[str], cgroup_size: int = 0, process_pids: list[int] = []):
         if self.has_started:
             raise Exception("Policy already started")
 
         print_benchmark_name = benchmark_name if isinstance(benchmark_name, str) else ",".join(benchmark_name)
+        watch_pids_str = ",".join(str(pid) for pid in process_pids)
 
         self.has_started = True
         cmd = [
@@ -50,6 +51,8 @@ class CacheExtPolicy:
             self.cgroup_path,
             "--benchmark_name",
             print_benchmark_name,
+            "--process_pids",
+            watch_pids_str
         ]
 
         if cgroup_size:
@@ -164,72 +167,6 @@ def edit_yaml_file(file_path):
         yaml.dump(data, file)
 
 
-def run_command_with_live_output(command, **kwargs):
-    # Default kwargs for Popen
-    popen_kwargs = {
-        "stdout": subprocess.PIPE,
-        "stderr": subprocess.PIPE,
-        "text": True,
-        "bufsize": 1,
-        "universal_newlines": True,
-    }
-
-    # Update with any user-provided kwargs
-    popen_kwargs.update(kwargs)
-
-    process = subprocess.Popen(command, **popen_kwargs)
-    assert process.stdout is not None
-    assert process.stderr is not None
-
-    stdout_output = []
-    stderr_output = []
-
-    # Set stdout and stderr to non-blocking mode
-    for pipe in [process.stdout, process.stderr]:
-        if pipe:
-            os.set_blocking(pipe.fileno(), False)
-
-    while True:
-        ready_to_read, _, _ = select.select(
-            [process.stdout, process.stderr], [], [], 0.1
-        )
-
-        for pipe in ready_to_read:
-            if pipe == process.stdout:
-                line = process.stdout.readline()
-                if line:
-                    print(line.strip())
-                    stdout_output.append(line)
-            elif pipe == process.stderr:
-                line = process.stderr.readline()
-                if line:
-                    print(line.strip(), file=sys.stderr)
-                    stderr_output.append(line)
-
-        if process.poll() is not None:
-            break
-
-    # Read any remaining output
-    for pipe in [process.stdout, process.stderr]:
-        if pipe:
-            remaining_output = pipe.read()
-            if remaining_output:
-                print(
-                    remaining_output.strip(),
-                    file=sys.stderr if pipe == process.stderr else sys.stdout,
-                )
-                (stderr_output if pipe == process.stderr else stdout_output).append(
-                    remaining_output
-                )
-
-    if process.returncode != 0:
-        raise subprocess.CalledProcessError(
-            process.returncode, command, "".join(stdout_output), "".join(stderr_output)
-        )
-
-    return "".join(stdout_output)
-
-
 def run(cmd, *args, **kwargs):
     # Set check=True
     kwargs["check"] = True
@@ -240,23 +177,6 @@ def run(cmd, *args, **kwargs):
 def check_output(cmd, *args, **kwargs):
     log.info("Running command: %s" % cmd)
     return subprocess.check_output(cmd, *args, **kwargs)
-
-
-def read_file(path: str):
-    with open(path, "r") as f:
-        return f.read().strip()
-
-
-def write_file(path: str, data: str):
-    with open(path, "w") as f:
-        f.write(data)
-
-
-def enable_cache_ext_for_cgroup(cgroup=DEFAULT_CACHE_EXT_CGROUP):
-    # Note: With the new per-cgroup interface, cache_ext policies are now
-    # attached directly to specific cgroups via the BPF programs,
-    # so we no longer need to enable it globally via /proc/cache_ext_enabled_cgroup
-    pass
 
 
 def delete_cgroup(cgroup):
@@ -467,9 +387,6 @@ class BenchmarkFramework(ABC):
     def benchmark_cmd(self, config):
         raise NotImplementedError
 
-    def second_benchmark_cmd(self, config):
-        return []
-
     def cmd_extra_envs(self, config):
         return {}
 
@@ -522,12 +439,6 @@ class BenchmarkFramework(ABC):
             action="store_true",
             default=False,
             help="Debug segfaults",
-        )
-        parser.add_argument(
-            "--default-only",
-            action="store_true",
-            default=False,
-            help="Run only the default config. Helpful for running MGLRU.",
         )
         parser.add_argument(
             "--iterations",
@@ -596,10 +507,10 @@ class BenchmarkFramework(ABC):
             self.benchmark_prepare(config)
 
             # Run benchmark
-            cmd = self.benchmark_cmd(config)
-
-            # Limit CPUs
-            cmd = ["taskset", "-c", "0-%s" % str(config["cpus"] - 1)] + cmd
+            cmds = [
+                ["taskset", "-c", "0-%s" % str(config["cpus"] - 1)] + cmd 
+                for cmd in self.benchmark_cmd(config)
+            ]
 
             env = os.environ
             if self.args.debug_segfault:
@@ -609,49 +520,57 @@ class BenchmarkFramework(ABC):
             if extra_envs:
                 log.info("Adding extra envs: %s" % extra_envs)
             env.update(extra_envs)
+            
+            pids = []
+            named_pipes = []
+            for i, cmd in enumerate(cmds):
+                try:
+                    log.info("Running command: %s" % cmd)
+                    named_pipe = f"/tmp/bench_pipe_{i}"
+                    if os.path.exists(named_pipe):
+                        os.remove(named_pipe)
+                    os.mkfifo(named_pipe)
+                    named_pipes.append(named_pipe)
+
+                    # Pass the named_pipe in as synchronization
+                    # so that the benchmarks won't start until the
+                    # policy is loaded
+                    proc = Popen(cmd + [named_pipe], env=env)
+                    pids.append(proc.pid)
+                except CalledProcessError as e:
+                    log.error("Benchmark failed with error code %s" % e.returncode)
+                    log.error("Output was: %s" % e.output)
+                    raise e
+                
+            # Pass the PIDs to the policy
+            config["process_pids"] = pids
+
+            # Load policy
             self.before_benchmark(config)
-            try:
-                if self.second_command:
-                    second_cmd = self.second_benchmark_cmd(config)
-                    log.info("Running second command: %s" % second_cmd)
-                    second_proc = subprocess.Popen(second_cmd, stdout=subprocess.PIPE)
 
-                log.info("Running command: %s" % cmd)
-                stdout = run_command_with_live_output(cmd, env=env)
-                # stdout = check_output(cmd, encoding="utf-8", env=env)
+            for named_pipe in named_pipes:
+                with open(named_pipe, "w") as f:
+                    f.write("start")
+                os.remove(named_pipe)
 
-                if self.second_command:
-                    ret_code = second_proc.wait()
-                    if ret_code != 0:
-                        log.error(
-                            "Second benchmark failed with error code %s" % ret_code
-                        )
-                        raise CalledProcessError(
-                            ret_code, self.second_benchmark_cmd(config)
-                        )
-                    second_proc_output = second_proc.stdout.read().decode("utf-8")
-            except CalledProcessError as e:
-                log.error("Benchmark failed with error code %s" % e.returncode)
-                log.error("Output was: %s" % e.output)
-                raise e
+            # Wait for benchmarks to finish
+            for pid in pids:
+                os.waitpid(pid, 0)
 
+            # Remove policy after benchmark
             self.after_benchmark(config)
                 
-            # Save results
+            # Can't really save results anymore
+            # because we have multiple processes
             log.info("Parsing results...")
-            if self.second_command:
-                bench_run_results = self.parse_results(
-                    stdout, second_output=second_proc_output
-                )
-            else:
-                bench_run_results = self.parse_results(stdout)
-            bench_run = BenchRun(config, bench_run_results)
-            results.append(bench_run)
-            checkpoint_results(results_file, results)
-            sleep(5)
+            # bench_run_results = self.parse_results(stdout)
+            # bench_run = BenchRun(config, bench_run_results)
+            # results.append(bench_run)
+            # checkpoint_results(results_file, results)
+            # sleep(5)
         all_results = []
-        for config in all_configs:
-            all_results.append(single_result_select(results, config))
+        # for config in all_configs:
+        #     all_results.append(single_result_select(results, config))
         return all_results
 
 

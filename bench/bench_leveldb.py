@@ -189,11 +189,19 @@ class LevelDBBenchmark(BenchmarkFramework):
             required=False,
             help="Number of seconds for the YCSB workload to run each epoch"
         )
+        parser.add_argument(
+            "--nr-op",
+            type=int,
+            default=1000000,
+            required=False,
+            help="Number of operations for the YCSB workload"
+        )
 
     def generate_configs(self, configs: List[Dict]) -> List[Dict]:
         configs = add_config_option("enable_mmap", [False], configs)
         configs = add_config_option("runtime_seconds", [self.args.runtime_seconds], configs)
         configs = add_config_option("warmup_runtime_seconds", [self.args.warmup_runtime_seconds], configs)
+        configs = add_config_option("nr_op", [self.args.nr_op], configs)
         if self.args.nr_thread is not None:
             configs = add_config_option("nr_thread", parse_numbers_string(self.args.nr_thread), configs)
         if self.args.next_op_interval_ns is not None:
@@ -209,16 +217,11 @@ class LevelDBBenchmark(BenchmarkFramework):
                 "benchmark", [[s] for s in parse_strings_string(self.args.benchmark)], configs
             )
         configs = add_config_option("cgroup_size", [10 * GiB], configs)
-        if self.args.default_only:
-            configs = add_config_option(
-                "cgroup_name", [DEFAULT_BASELINE_CGROUP], configs
-            )
-        else:
-            configs = add_config_option(
-                "cgroup_name",
-                [DEFAULT_BASELINE_CGROUP, DEFAULT_CACHE_EXT_CGROUP],
-                configs,
-            )
+        configs = add_config_option(
+            "cgroup_name",
+            [DEFAULT_CACHE_EXT_CGROUP],
+            configs,
+        )
 
         # For baseline cgroup only, add fadvise options
         fadvise_hints = parse_strings_string(self.args.fadvise_hints)
@@ -257,40 +260,28 @@ class LevelDBBenchmark(BenchmarkFramework):
         drop_page_cache()
         disable_swap()
         disable_smt()
-        if config["cgroup_name"] == DEFAULT_CACHE_EXT_CGROUP:
-            recreate_cache_ext_cgroup(limit_in_bytes=config["cgroup_size"])
-            self.cache_ext_policy.start(config["benchmark"], cgroup_size=config["cgroup_size"])
-        else:
-            recreate_baseline_cgroup(limit_in_bytes=config["cgroup_size"])
+        recreate_cache_ext_cgroup(limit_in_bytes=config["cgroup_size"])
 
     def benchmark_cmd(self, config):
         bench_binary_dir = self.args.bench_binary_dir
         bench_binary = os.path.join(bench_binary_dir, "run_leveldb")
-        
-        log_file = "parallel_jobs"
-        i = 0
-        while os.path.exists(f'{log_file}_{i}.log'):
-            i += 1
-        log_file = f'{log_file}_{i}.log'
 
         cmd = [
             "sudo",
-            "parallel", "--joblog", log_file, # Adds a log file
             "cgexec", "-g", "memory:%s" % config["cgroup_name"],
             bench_binary,
-            ":::",
         ]
 
         def get_bench_file(benchmark):
             bench_file = "../leveldb/config/%s.yaml" % benchmark
-            return os.path.abspath(os.path.join(bench_binary_dir, bench_file))
+            bench_file_path = os.path.abspath(os.path.join(bench_binary_dir, bench_file))
+            if not os.path.exists(bench_file_path):
+                raise Exception("Benchmark config file not found: %s" % bench_file_path)
+            return bench_file_path
 
         counts = {}
         for i, benchmark in enumerate(config["benchmark"]):
             original_file = get_bench_file(benchmark)
-            if not os.path.exists(original_file):
-                raise Exception("Benchmark file not found: %s" % original_file)
-            
             if benchmark in counts:
                 # Copy and rename those sharing the same name
                 new_file = get_bench_file("%s_%d" % (benchmark, counts[benchmark]))
@@ -304,12 +295,12 @@ class LevelDBBenchmark(BenchmarkFramework):
                 bench_config["leveldb"]["data_dir"] = self.get_leveldb_temp_db(config, i)
                 bench_config["workload"]["runtime_seconds"] = config["runtime_seconds"]
                 bench_config["workload"]["warmup_runtime_seconds"] = config["warmup_runtime_seconds"]
+                bench_config["workload"]["nr_op"] = config["nr_op"]
                 if "nr_thread" in config:
                     bench_config["workload"]["nr_thread"] = config["nr_thread"]
                 if "next_op_interval_ns" in config:
                     bench_config["workload"]["next_op_interval_ns"] = config["next_op_interval_ns"]
-            cmd.append(bench_file)
-        return cmd
+            yield cmd + [bench_file]
 
     def cmd_extra_envs(self, config):
         extra_envs = {}
@@ -324,9 +315,15 @@ class LevelDBBenchmark(BenchmarkFramework):
             extra_envs["ENABLE_SCAN_FADVISE"] = config["fadvise"]
         return extra_envs
 
+    def before_benchmark(self, config):
+        self.cache_ext_policy.start(
+            config["benchmark"], 
+            cgroup_size=config["cgroup_size"],
+            process_pids=config.get("process_pids", [])
+        )
+
     def after_benchmark(self, config):
-        if config["cgroup_name"] == DEFAULT_CACHE_EXT_CGROUP:
-            self.cache_ext_policy.stop()
+        self.cache_ext_policy.stop()
         sleep(2)
         enable_smt()
 

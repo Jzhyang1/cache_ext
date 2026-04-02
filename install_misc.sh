@@ -19,4 +19,4 @@ sudo apt-get update
 sudo apt-get install -y fio cgroup-tools python3-ruamel.yaml python3-numpy \
 			python3-matplotlib python3-pandas python3-psutil \
 			jupyter-core jupyter-notebook screen \
-			cgroup-tools parallel clang-15 cmake
+			cgroup-tools clang-15 cmake
