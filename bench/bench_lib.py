@@ -525,17 +525,18 @@ class BenchmarkFramework(ABC):
             named_pipes = []
             for i, cmd in enumerate(cmds):
                 try:
-                    log.info("Running command: %s" % cmd)
                     named_pipe = f"/tmp/bench_pipe_{i}"
                     if os.path.exists(named_pipe):
                         os.remove(named_pipe)
                     os.mkfifo(named_pipe)
                     named_pipes.append(named_pipe)
+                    cmd += [named_pipe]
+                    log.info("Running command: %s" % cmd)
 
                     # Pass the named_pipe in as synchronization
                     # so that the benchmarks won't start until the
                     # policy is loaded
-                    proc = Popen(cmd + [named_pipe], env=env)
+                    proc = Popen(cmd, env=env)
                     pids.append(proc.pid)
                 except CalledProcessError as e:
                     log.error("Benchmark failed with error code %s" % e.returncode)
