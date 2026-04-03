@@ -64,15 +64,18 @@ class FileSearchBenchmark(BenchmarkFramework):
         )
         return configs
 
-    def before_benchmark(self, config):
+    def benchmark_prepare(self, config):
         drop_page_cache()
         disable_swap()
         disable_smt()
-        if config["cgroup_name"] == DEFAULT_CACHE_EXT_CGROUP:
-            recreate_cache_ext_cgroup(limit_in_bytes=config["cgroup_size"])
-            self.cache_ext_policy.start("filesearch_benchmark", config["cgroup_size"])
-        else:
-            recreate_baseline_cgroup(limit_in_bytes=config["cgroup_size"])
+        recreate_baseline_cgroup(limit_in_bytes=config["cgroup_size"])
+
+    def before_benchmark(self, config):
+        self.cache_ext_policy.start(
+            "filesearch_benchmark", 
+            cgroup_size=config["cgroup_size"],
+            process_pids=config.get("process_pids", [])
+        )
         self.start_time = time()
 
     def benchmark_cmd(self, config):
@@ -93,8 +96,7 @@ class FileSearchBenchmark(BenchmarkFramework):
 
     def after_benchmark(self, config):
         self.end_time = time()
-        if config["cgroup_name"] == DEFAULT_CACHE_EXT_CGROUP:
-            self.cache_ext_policy.stop()
+        self.cache_ext_policy.stop()
         enable_smt()
 
     def parse_results(self, stdout: str) -> BenchResults:

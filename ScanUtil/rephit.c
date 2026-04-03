@@ -3,13 +3,16 @@
 #include <dirent.h>
 #include <string.h>
 #include <sys/stat.h>
+#include <sys/mman.h>
 #include <fcntl.h>
 #include <unistd.h>
 #include <stdbool.h>
 
 #define OFFSET_STEP 4096
+#define HIT_INDEX 77 // arbitrary page offset to repeatedly hit
+#define HIT_COUNT 100
 
-void scan_file(const char *filepath, bool reverse) {
+void rephit_file(const char *filepath) {
     int fd = open(filepath, O_RDONLY);
     if (fd < 0) {
         perror(filepath);
@@ -23,34 +26,26 @@ void scan_file(const char *filepath, bool reverse) {
         return;
     }
 
-    off_t start, end, step;
-    if (reverse) {
-        start = st.st_size - 1;
-        end = start % OFFSET_STEP;
-        step = -OFFSET_STEP;
-    } else {
-        start = 0;
-        end = st.st_size & -OFFSET_STEP;
-        step = OFFSET_STEP;
-    }
-
-    unsigned char buf;
-    for (off_t offset = start; offset != end; offset += step) {
-        if (lseek(fd, offset, SEEK_SET) == (off_t)-1) {
-            perror("lseek");
-            break;
+    // if we have enough pages, we can just mmap and repeatedly hit the same page
+    if (st.st_size > HIT_INDEX * OFFSET_STEP) {
+        char *map = mmap(NULL, st.st_size, PROT_READ, MAP_SHARED, fd, 0);
+        if (map == MAP_FAILED) {
+            perror("mmap");
+            close(fd);
+            return;
         }
-        if (read(fd, &buf, 1) != 1) {
-            // Could be EOF or error
-            break;
+        for (int i = 0; i < HIT_COUNT; ++i) {
+            volatile char c = map[HIT_INDEX * OFFSET_STEP];
+            (void)c; // prevent compiler optimization
+            // flush cpu cache to get better resolution (only works on x86-64)
+            asm volatile("clflush (%0)" :: "r"(map + HIT_INDEX * OFFSET_STEP));
         }
-        // For benchmarking, we just read the byte
+        munmap(map, st.st_size);
     }
-
     close(fd);
 }
 
-void scan_dir(const char *dirpath, bool reverse) {
+void rephit_dir(const char *dirpath) {
     DIR *dir = opendir(dirpath);
     if (!dir) {
         perror(dirpath);
@@ -66,20 +61,20 @@ void scan_dir(const char *dirpath, bool reverse) {
                 continue;
             // Recursively scan subdirectories
             snprintf(filepath, sizeof(filepath), "%s/%s", dirpath, entry->d_name);
-            scan_dir(filepath, reverse);
+            rephit_dir(filepath);
             continue;
         }
         if (entry->d_type != DT_REG)
             continue; // Only regular files
 
         snprintf(filepath, sizeof(filepath), "%s/%s", dirpath, entry->d_name);
-        scan_file(filepath, reverse);
+        rephit_file(filepath);
     }
 
     closedir(dir);
 }
 
-const char *usage = "Usage: scan [-r] <directory> <syncpipe>\n";
+const char *usage = "Usage: rephit <directory> <syncpipe>\n";
 
 int main(int argc, char *argv[]) {
     if (argc < 3) {
@@ -88,16 +83,8 @@ int main(int argc, char *argv[]) {
     }
 
     bool reverse = false;
-    char* dirpath = NULL;
-    char* syncpipe = NULL;
-    if (argc >= 4 && strcmp(argv[1], "-r") == 0) {
-        reverse = true;
-        dirpath = argv[2];
-        syncpipe = argv[3];
-    } else {
-        dirpath = argv[1];
-        syncpipe = argv[2];
-    }
+    char* dirpath = argv[1];
+    char* syncpipe = argv[2];
 
     // Read from syncpipe to synchronize with the parent process
     int fd = open(syncpipe, O_RDONLY);
@@ -112,6 +99,6 @@ int main(int argc, char *argv[]) {
         return 1;
     }
 
-    scan_dir(dirpath, reverse);
+    rephit_dir(dirpath);
     return 0;
 }

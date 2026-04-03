@@ -2,7 +2,7 @@
 GCC ?= gcc
 CFLAGS = -O2 -fsanitize=address -g -Wall
 
-all: linscansparse.out
+all: linscansparse.out rephit.out
 
-linscansparse.out: linscansparse.c
+%.out: %.c
 	$(GCC) $(CFLAGS) $< -o $@
