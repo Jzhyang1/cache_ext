@@ -147,9 +147,13 @@ struct cache_ext_ops log_ops = {
 // Hook into the sched_switch tracepoint
 SEC("tracepoint/sched/sched_switch")
 int bpf_prog_sched_switch(struct trace_event_raw_sched_switch *ctx) {
-    // // Read the PID of the next task being scheduled
+    // Read the PID of the next task being scheduled
     pid_t next_pid = ctx->next_pid;
     pid_t prev_pid = ctx->prev_pid;
+
+	// If neither the previous nor the next PID is in the watchlist, skip
+	if (!pid_in_watchlist(prev_pid) && !pid_in_watchlist(next_pid))
+		return 0;
     
     // 1. Reserve space directly in the ring buffer
     struct userspace_event *event = bpf_ringbuf_reserve(&userspace_events, sizeof(*event), 0);

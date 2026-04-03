@@ -27,10 +27,25 @@ struct {
     __uint(max_entries, 200000);
 } inode_watchlist SEC(".maps");
 
+struct {
+    __uint(type, BPF_MAP_TYPE_HASH);
+    __type(key, __u64);
+    __type(value, bool);
+    __uint(max_entries, 128); // support up to 128 PIDs for now
+} pid_watchlist SEC(".maps");
+
 static inline bool inode_in_watchlist(u64 inode_no) {
     // Start simple. Return true if file page and not executable.
     // TODO: Fill me
     u8 *ret = bpf_map_lookup_elem(&inode_watchlist, &inode_no);
+    if (ret != NULL) {
+        return true;
+    }
+    return false;
+};
+
+static inline bool pid_in_watchlist(u64 pid) {
+    u8 *ret = bpf_map_lookup_elem(&pid_watchlist, &pid);
     if (ret != NULL) {
         return true;
     }

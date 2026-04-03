@@ -17,6 +17,7 @@
 #include <bpf/libbpf.h>
 
 #define inode_watchlist_map(skel) 		((skel)->maps.inode_watchlist)
+#define pid_watch_map(skel) 			((skel)->maps.pid_watchlist)
 #define watch_dir_path_map(skel)		((skel)->rodata->watch_dir_path)
 #define watch_dir_path_len_map(skel)	((skel)->rodata->watch_dir_path_len)
 
@@ -78,6 +79,36 @@ int initialize_watch_dir_map(const char *path, int watch_dir_map_fd, bool recurs
 
 	closedir(dir);
 
+	return 0;
+}
+
+int initialize_pid_watch_map(const char *pid_list_str, int pid_watch_map_fd) {
+	// Create a copy so we don't mutate the original argv string
+	char *pids_copy = strdup(pid_list_str); 
+	if (!pids_copy) return -1;
+
+	char *saveptr;
+	char *pid_str = strtok_r(pids_copy, ",", &saveptr);
+
+	// Loop while we have tokens AND room for the PID + a null terminator
+	while (pid_str) { 
+		char *endptr;
+		uint64_t val = strtoull(pid_str, &endptr, 10);
+		
+		// Check if the string was actually a number
+		if (*endptr != 0) {
+			fprintf(stderr, "Invalid PID: %s\n", pid_str);
+			free(pids_copy);
+			return -1;
+		}
+		if (bpf_map_update_elem(pid_watch_map_fd, &val, &val, 0) != 0) {
+			perror("Failed to update pid_watch map");
+			free(pids_copy);
+			return -1;
+		}
+		pid_str = strtok_r(NULL, ",", &saveptr);
+	}
+	free(pids_copy);
 	return 0;
 }
 

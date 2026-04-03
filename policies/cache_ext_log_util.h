@@ -8,6 +8,7 @@ struct cmdline_args {
 	char *watch_dir;
 	uint64_t cgroup_size;
 	char *cgroup_path;
+    char *process_pids_str;
 };
 
 static struct argp_option options[] = {
@@ -15,6 +16,7 @@ static struct argp_option options[] = {
 	{"cgroup_size", 's', "SIZE", 0, "Size of the cgroup"},
 	{"cgroup_path", 'c', "PATH", 0, "Path to cgroup (e.g., /sys/fs/cgroup/cache_ext_test)"},
     {"benchmark_name", 'b', "NAME", 0, "Name of the benchmark"},
+    {"process_pids", 'p', "PIDS", 0, "Comma-separated list of process PIDs to monitor"},
 	{ 0 },
 };
 
@@ -37,6 +39,9 @@ static error_t parse_opt(int key, char *arg, struct argp_state *state)
     case 'b':
         benchmark_name = arg;
         break;
+    case 'p':
+        args->process_pids_str = arg;
+        break;
 	default:
 		return ARGP_ERR_UNKNOWN;
 	}
@@ -44,7 +49,7 @@ static error_t parse_opt(int key, char *arg, struct argp_state *state)
 }
 
 static int parse_args(int argc, char **argv, struct cmdline_args *args) {
-	struct argp argp = { options, parse_opt, 0, 0 };
+	struct argp argp = { options, parse_opt, 0, 0, 0 };
 	argp_parse(&argp, argc, argv, 0, 0, args);
 
 	if (args->watch_dir == NULL) {
@@ -59,6 +64,10 @@ static int parse_args(int argc, char **argv, struct cmdline_args *args) {
 		fprintf(stderr, "Missing required argument: cgroup_path\n");
 		return 1;
 	}
+    if (args->process_pids_str == NULL) {
+        fprintf(stderr, "Missing required argument: process_pids\n");
+        return 1;
+    }
 	return 0;
 }
 

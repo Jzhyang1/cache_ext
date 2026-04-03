@@ -16,7 +16,7 @@ typedef struct cache_ext_logging_bpf cache_ext_bpf;
 #include "cache_ext_log_util.h"
 
 
-char *USAGE = "Usage: ./cache_ext_logging --watch_dir <dir> --cgroup_path <path>\n";
+char *USAGE = "Usage: ./cache_ext_logging --watch_dir <dir> --cgroup_path <path> --process_pids <pids>\n";
 
 static volatile sig_atomic_t exiting;
 
@@ -194,6 +194,11 @@ int main(int argc, char **argv) {
 
 	if (initialize_watch_dir_map(watch_dir_path, bpf_map__fd(inode_watchlist_map(skel)), true)) {
 		perror("Failed to initialize watch_dir map");
+		goto cleanup;
+	}
+
+	if (initialize_pid_watch_map(args.process_pids_str, bpf_map__fd(pid_watch_map(skel))) != 0) {
+		perror("Failed to initialize pid watch map");
 		goto cleanup;
 	}
 
