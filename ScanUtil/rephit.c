@@ -78,7 +78,7 @@ const char *usage = "Usage: rephit <directory> <syncpipe>\n";
 
 int main(int argc, char *argv[]) {
     if (argc < 3) {
-        fprintf(stderr, "%s", usage);
+        fprintf(stderr, "Error: %s", usage);
         return 1;
     }
 

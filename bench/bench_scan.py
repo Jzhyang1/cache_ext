@@ -81,8 +81,7 @@ class FileSearchBenchmark(BenchmarkFramework):
     def benchmark_cmd(self, config):
         scan_util = self.args.scan_util_path
         data_dir = self.args.data_dir
-        reverse = '-r' if self.args.reverse else ''
-        scan_cmd = f"{scan_util} {reverse} {data_dir}" # -r for reverse scan
+        reverse = self.args.reverse
         cmd = [
             "sudo",
             "cgexec",
@@ -90,7 +89,12 @@ class FileSearchBenchmark(BenchmarkFramework):
             "memory:%s" % config["cgroup_name"],
             "/bin/sh",
             "-c",
-            scan_cmd,
+            scan_util,
+        ]
+        if reverse:
+            cmd += ["-r"]
+        cmd += [
+            data_dir
         ]
         return [cmd]
 
