@@ -32,7 +32,6 @@ struct userspace_event {
 			u64 next_pid;
 		};
 	};
-	u64 comm;
 };
 
 struct {
@@ -107,8 +106,6 @@ void BPF_STRUCT_OPS(log_folio_accessed, struct folio *folio) {
     event->nr_event = __atomic_fetch_add(&access_count, 1, __ATOMIC_ACQ_REL);
 	event->drop_count = drop_count;
     event->type = EVENT_PAGE_ACCESS;
-	// get the name of the process that we are in (hopefully this is the one doing the access)
-	bpf_get_current_comm(&event->comm, sizeof(event->comm));
 
     // 4. Commit the data to userspace
     bpf_ringbuf_submit(event, 0);
