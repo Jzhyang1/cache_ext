@@ -92,7 +92,7 @@ class FileSearchBenchmark(BenchmarkFramework):
             "-c",
             scan_cmd,
         ]
-        return cmd
+        return [cmd]
 
     def after_benchmark(self, config):
         self.end_time = time()
