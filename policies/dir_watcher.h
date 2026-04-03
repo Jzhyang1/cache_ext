@@ -93,7 +93,8 @@ int initialize_pid_watch_map(const char *pid_list_str, int pid_watch_map_fd) {
 	// Loop while we have tokens AND room for the PID + a null terminator
 	while (pid_str) { 
 		char *endptr;
-		uint64_t val = strtoull(pid_str, &endptr, 10);
+		uint32_t val = strtoul(pid_str, &endptr, 10);
+		uint8_t is_valid = 1;
 		
 		// Check if the string was actually a number
 		if (*endptr != 0) {
@@ -101,7 +102,7 @@ int initialize_pid_watch_map(const char *pid_list_str, int pid_watch_map_fd) {
 			free(pids_copy);
 			return -1;
 		}
-		if (bpf_map_update_elem(pid_watch_map_fd, &val, &val, 0) != 0) {
+		if (bpf_map_update_elem(pid_watch_map_fd, &val, &is_valid, 0) != 0) {
 			perror("Failed to update pid_watch map");
 			free(pids_copy);
 			return -1;
