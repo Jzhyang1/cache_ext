@@ -87,8 +87,6 @@ class FileSearchBenchmark(BenchmarkFramework):
             "cgexec",
             "-g",
             "memory:%s" % config["cgroup_name"],
-            "/bin/sh",
-            "-c",
             scan_util,
         ]
         if reverse:
