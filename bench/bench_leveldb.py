@@ -275,13 +275,13 @@ class LevelDBBenchmark(BenchmarkFramework):
         def get_bench_file(benchmark):
             bench_file = "../leveldb/config/%s.yaml" % benchmark
             bench_file_path = os.path.abspath(os.path.join(bench_binary_dir, bench_file))
-            if not os.path.exists(bench_file_path):
-                raise Exception("Benchmark config file not found: %s" % bench_file_path)
             return bench_file_path
 
         counts = {}
         for i, benchmark in enumerate(config["benchmark"]):
             original_file = get_bench_file(benchmark)
+            if not os.path.exists(original_file):
+                raise Exception("Benchmark config file not found: %s" % original_file)
             if benchmark in counts:
                 # Copy and rename those sharing the same name
                 new_file = get_bench_file("%s_%d" % (benchmark, counts[benchmark]))
