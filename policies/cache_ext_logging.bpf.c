@@ -87,8 +87,8 @@ void BPF_STRUCT_OPS(log_evict_folios, struct cache_ext_eviction_ctx *eviction_ct
 }
 
 void BPF_STRUCT_OPS(log_folio_accessed, struct folio *folio) {
-    if (!is_folio_relevant(folio))
-        return;
+    // if (!is_folio_relevant(folio))
+    //     return;
 
     // 1. Reserve space directly in the ring buffer
     struct userspace_event *event = bpf_ringbuf_reserve(&userspace_events, sizeof(*event), 0);
@@ -149,8 +149,8 @@ int bpf_prog_sched_switch(struct trace_event_raw_sched_switch *ctx) {
     pid_t prev_pid = ctx->prev_pid;
 
 	// If neither the previous nor the next PID is in the watchlist, skip
-	if (!pid_in_watchlist(prev_pid) && !pid_in_watchlist(next_pid))
-		return 0;
+	// if (!pid_in_watchlist(prev_pid) && !pid_in_watchlist(next_pid))
+	// 	return 0;
     
     // 1. Reserve space directly in the ring buffer
     struct userspace_event *event = bpf_ringbuf_reserve(&userspace_events, sizeof(*event), 0);
