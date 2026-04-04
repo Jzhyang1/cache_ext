@@ -29,17 +29,12 @@ void rephit_file(const char *filepath) {
     // if we have enough pages, we can just mmap and repeatedly hit the same page
     long long sum = 0;  // to prevent compiler optimization
     if (st.st_size > HIT_INDEX * PAGE_SIZE) {
-        char *map = mmap(NULL, st.st_size, PROT_READ, MAP_SHARED, fd, 0);
+        // don't want prefetching so we only map the page we want to hit
+        int before = HIT_INDEX * PAGE_SIZE;
+        int size = st.st_size - before; size = size > PAGE_SIZE ? PAGE_SIZE : size;
+        char *map = mmap(NULL, size, PROT_READ, MAP_SHARED, fd, before);
         if (map == MAP_FAILED) {
             perror("mmap");
-            goto cleanup;
-        }
-        // don't want prefetching
-        int before = HIT_INDEX * PAGE_SIZE;
-        int after = (HIT_INDEX + 1) * PAGE_SIZE;
-        if (madvise(map, before, MADV_DONTNEED) != 0 ||
-            after < st.st_size && madvise(map + after, st.st_size - after, MADV_DONTNEED) != 0) {
-            perror("madvise");
             goto cleanup;
         }
         for (int i = 0; i < HIT_COUNT; ++i) {
@@ -49,7 +44,7 @@ void rephit_file(const char *filepath) {
             asm volatile("clflush (%0)" :: "r"(map + HIT_INDEX * PAGE_SIZE));
         }
         cleanup:
-        munmap(map, st.st_size);
+        munmap(map, size);
     }
     close(fd);
 }
