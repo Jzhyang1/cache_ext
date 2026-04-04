@@ -19,4 +19,4 @@ if __name__ == '__main__':
     plt.xlabel('Value')
     plt.ylabel('Frequency')
     plt.title('Histogram')
-    plt.show()
+    plt.savefig(f'{args.file}_histogram.png')
