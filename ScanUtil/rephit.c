@@ -31,8 +31,12 @@ void rephit_file(const char *filepath) {
         char *map = mmap(NULL, st.st_size, PROT_READ, MAP_SHARED, fd, 0);
         if (map == MAP_FAILED) {
             perror("mmap");
-            close(fd);
-            return;
+            goto cleanup;
+        }
+        // don't want prefetching
+        if (madvise(map, st.st_size, MADV_RANDOM) != 0) {
+            perror("madvise");
+            goto cleanup;
         }
         for (int i = 0; i < HIT_COUNT; ++i) {
             volatile char c = map[HIT_INDEX * PAGE_SIZE];
@@ -40,6 +44,7 @@ void rephit_file(const char *filepath) {
             // flush cpu cache to get better resolution (only works on x86-64)
             asm volatile("clflush (%0)" :: "r"(map + HIT_INDEX * PAGE_SIZE));
         }
+        cleanup:
         munmap(map, st.st_size);
     }
     close(fd);
