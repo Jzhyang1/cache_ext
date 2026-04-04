@@ -521,7 +521,8 @@ class BenchmarkFramework(ABC):
                 log.info("Adding extra envs: %s" % extra_envs)
             env.update(extra_envs)
             
-            pids = []
+            bench_pids = []
+            children = [] # to wait for child processes
             named_pipes = []
             for i, cmd in enumerate(cmds):
                 try:
@@ -541,7 +542,8 @@ class BenchmarkFramework(ABC):
                     # Pass the named_pipe in as synchronization
                     # so that the benchmarks won't start until the
                     # policy is loaded
-                    Popen(cmd, env=env)
+                    child = Popen(cmd, env=env)
+                    children.append(child)
                 except CalledProcessError as e:
                     log.error("Benchmark failed with error code %s" % e.returncode)
                     log.error("Output was: %s" % e.output)
@@ -552,11 +554,11 @@ class BenchmarkFramework(ABC):
                 with open(named_pipe + ".bwd", "r") as f:
                     pid_str = f.read().strip()
                     pid = int(pid_str)
-                    pids.append(pid)
+                    bench_pids.append(pid)
                     print(f"Read PID {pid} from {named_pipe}.bwd")
 
             # Pass the PIDs to the policy
-            config["process_pids"] = pids
+            config["process_pids"] = bench_pids
 
             # Load policy
             self.before_benchmark(config)
@@ -566,8 +568,8 @@ class BenchmarkFramework(ABC):
                     f.write("start")
 
             # Wait for benchmarks to finish
-            for pid in pids:
-                os.waitpid(pid, 0)
+            for child in children:
+                child.wait()
 
             # Remove policy after benchmark
             self.after_benchmark(config)
