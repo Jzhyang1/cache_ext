@@ -27,6 +27,7 @@ void rephit_file(const char *filepath) {
     }
 
     // if we have enough pages, we can just mmap and repeatedly hit the same page
+    long long sum = 0;  // to prevent compiler optimization
     if (st.st_size > HIT_INDEX * PAGE_SIZE) {
         char *map = mmap(NULL, st.st_size, PROT_READ, MAP_SHARED, fd, 0);
         if (map == MAP_FAILED) {
@@ -37,13 +38,13 @@ void rephit_file(const char *filepath) {
         int before = HIT_INDEX * PAGE_SIZE;
         int after = (HIT_INDEX + 1) * PAGE_SIZE;
         if (madvise(map, before, MADV_DONTNEED) != 0 ||
-            madvise(map + after, st.st_size - after, MADV_DONTNEED) != 0) {
+            after < st.st_size && madvise(map + after, st.st_size - after, MADV_DONTNEED) != 0) {
             perror("madvise");
             goto cleanup;
         }
         for (int i = 0; i < HIT_COUNT; ++i) {
             volatile char c = map[HIT_INDEX * PAGE_SIZE];
-            (void)c; // prevent compiler optimization
+            sum += c; // prevent compiler optimization
             // flush cpu cache to get better resolution (only works on x86-64)
             asm volatile("clflush (%0)" :: "r"(map + HIT_INDEX * PAGE_SIZE));
         }
