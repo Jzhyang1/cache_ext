@@ -525,10 +525,15 @@ class BenchmarkFramework(ABC):
             named_pipes = []
             for i, cmd in enumerate(cmds):
                 try:
+                    # Our named_pipe will have a forward (to process) and backward (from process)
+                    #   version. <named_pipe>.fwd and <named_pipe>.bwd
+                    # We pass named_pipe to the process and expect them to write their PID to bwd
+                    #   then we write something to fwd to start the benchmark
                     named_pipe = f"/tmp/bench_pipe_{i}"
-                    if os.path.exists(named_pipe):
-                        os.remove(named_pipe)
-                    os.mkfifo(named_pipe)
+                    for pipe in [named_pipe + ".fwd", named_pipe + ".bwd"]:
+                        if os.path.exists(pipe):
+                            os.remove(pipe)
+                        os.mkfifo(pipe)
                     named_pipes.append(named_pipe)
                     cmd += [named_pipe]
                     log.info("Running command: %s" % cmd)
@@ -536,13 +541,20 @@ class BenchmarkFramework(ABC):
                     # Pass the named_pipe in as synchronization
                     # so that the benchmarks won't start until the
                     # policy is loaded
-                    proc = Popen(cmd, env=env)
-                    pids.append(proc.pid)
+                    Popen(cmd, env=env)
                 except CalledProcessError as e:
                     log.error("Benchmark failed with error code %s" % e.returncode)
                     log.error("Output was: %s" % e.output)
                     raise e
                 
+            # Read PIDs from the backward named pipes
+            for named_pipe in named_pipes:
+                with open(named_pipe + ".bwd", "r") as f:
+                    pid_str = f.read().strip()
+                    pid = int(pid_str)
+                    pids.append(pid)
+                    print(f"Read PID {pid} from {named_pipe}.bwd")
+
             # Pass the PIDs to the policy
             config["process_pids"] = pids
 
@@ -550,9 +562,8 @@ class BenchmarkFramework(ABC):
             self.before_benchmark(config)
 
             for named_pipe in named_pipes:
-                with open(named_pipe, "w") as f:
+                with open(named_pipe + ".fwd", "w") as f:
                     f.write("start")
-                os.remove(named_pipe)
 
             # Wait for benchmarks to finish
             for pid in pids:
@@ -560,6 +571,12 @@ class BenchmarkFramework(ABC):
 
             # Remove policy after benchmark
             self.after_benchmark(config)
+
+            # Remove named pipes if they still exist
+            for named_pipe in named_pipes:
+                for pipe in [named_pipe + ".fwd", named_pipe + ".bwd"]:
+                    if os.path.exists(pipe):
+                        os.remove(pipe)
                 
             # Can't really save results anymore
             # because we have multiple processes
