@@ -34,8 +34,8 @@ void rephit_file(const char *filepath) {
             goto cleanup;
         }
         // don't want prefetching
-        uint64_t before = HIT_INDEX * PAGE_SIZE;
-        uint64_t after = (HIT_INDEX + 1) * PAGE_SIZE;
+        int before = HIT_INDEX * PAGE_SIZE;
+        int after = (HIT_INDEX + 1) * PAGE_SIZE;
         if (madvise(map, before, MADV_DONTNEED) != 0 ||
             madvise(map + after, st.st_size - after, MADV_DONTNEED) != 0) {
             perror("madvise");
