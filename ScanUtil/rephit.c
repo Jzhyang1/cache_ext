@@ -8,7 +8,7 @@
 #include <unistd.h>
 #include <stdbool.h>
 
-#define OFFSET_STEP 4096
+#define PAGE_SIZE 4096
 #define HIT_INDEX 77 // arbitrary page offset to repeatedly hit
 #define HIT_COUNT 100
 
@@ -27,7 +27,7 @@ void rephit_file(const char *filepath) {
     }
 
     // if we have enough pages, we can just mmap and repeatedly hit the same page
-    if (st.st_size > HIT_INDEX * OFFSET_STEP) {
+    if (st.st_size > HIT_INDEX * PAGE_SIZE) {
         char *map = mmap(NULL, st.st_size, PROT_READ, MAP_SHARED, fd, 0);
         if (map == MAP_FAILED) {
             perror("mmap");
@@ -35,10 +35,10 @@ void rephit_file(const char *filepath) {
             return;
         }
         for (int i = 0; i < HIT_COUNT; ++i) {
-            volatile char c = map[HIT_INDEX * OFFSET_STEP];
+            volatile char c = map[HIT_INDEX * PAGE_SIZE];
             (void)c; // prevent compiler optimization
             // flush cpu cache to get better resolution (only works on x86-64)
-            asm volatile("clflush (%0)" :: "r"(map + HIT_INDEX * OFFSET_STEP));
+            asm volatile("clflush (%0)" :: "r"(map + HIT_INDEX * PAGE_SIZE));
         }
         munmap(map, st.st_size);
     }
