@@ -1,12 +1,18 @@
 # Code to split large log files into logs containing only
 # relevant page accesses by some PIDs
 
+
+import os
+import sys
+# Adds the directory containing this file to the search path
+sys.path.append(os.path.dirname(os.path.abspath(__file__)))
+
 def cache_log_file(logfile, pid_admit_set: set[int]):
     '''
     reads logfile and takes those page accesses associated with relevant pids and stores
     it into <logfile>.<pid>.log
     '''
-    from analysis.compare import LogFileRead, LogFileWrite
+    from compare import LogFileRead, LogFileWrite
 
     joined = '.'.join(map(str, sorted(pid_admit_set)))
     logfile_cache = f'{logfile}.{joined}.log'
@@ -23,7 +29,7 @@ def cache_log_file(logfile, pid_admit_set: set[int]):
                     g(access.nr_event, access.type, access.drop_count, access.address_space, access.page_index)
 
 def first_last_instance_of_pid(logfile, pids: set[int]):
-    from analysis.compare import LogFileRead
+    from compare import LogFileRead
     with LogFileRead(logfile) as f:
         firsts: dict[int, int | None] = {pid: None for pid in pids}
         lasts: dict[int, int | None] = {pid: None for pid in pids}
@@ -35,7 +41,7 @@ def first_last_instance_of_pid(logfile, pids: set[int]):
         return firsts, lasts
 
 def print_head(logfile, counts: set[int]):
-    from analysis.compare import LogFileRead
+    from compare import LogFileRead
     assert len(counts) == 1
     count = next(iter(counts))
     with LogFileRead(logfile) as f:
