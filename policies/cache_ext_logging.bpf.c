@@ -148,7 +148,7 @@ int bpf_prog_sched_switch(struct trace_event_raw_sched_switch *ctx) {
     pid_t next_pid = ctx->next_pid;
     pid_t prev_pid = ctx->prev_pid;
 
-	If neither the previous nor the next PID is in the watchlist, skip
+	// If neither the previous nor the next PID is in the watchlist, skip
 	if (!pid_in_watchlist(prev_pid) && !pid_in_watchlist(next_pid))
 		return 0;
     
