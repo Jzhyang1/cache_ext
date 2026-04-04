@@ -33,8 +33,8 @@ void rephit_file(const char *filepath) {
             perror("mmap");
             goto cleanup;
         }
-        // only set this 10% of the time so that we can see if the prefetcher is causing issues
-        if (rand() % 10 == 0) {
+        // only set this 50% of the time so that we can see if the prefetcher is causing issues
+        if (rand() % 2 == 0) {
             // don't want prefetching
             if (madvise(map, st.st_size, MADV_RANDOM) != 0) {
                 perror("madvise");
