@@ -33,13 +33,13 @@ void rephit_file(const char *filepath) {
             perror("mmap");
             goto cleanup;
         }
-        // only set this 50% of the time so that we can see if the prefetcher is causing issues
-        if (rand() % 2 == 0) {
-            // don't want prefetching
-            if (madvise(map, st.st_size, MADV_RANDOM) != 0) {
-                perror("madvise");
-                goto cleanup;
-            }
+        // don't want prefetching
+        uint64_t before = HIT_INDEX * PAGE_SIZE;
+        uint64_t after = (HIT_INDEX + 1) * PAGE_SIZE;
+        if (madvise(map, before, MADV_DONTNEED) != 0 ||
+            madvise(map + after, st.st_size - after, MADV_DONTNEED) != 0) {
+            perror("madvise");
+            goto cleanup;
         }
         for (int i = 0; i < HIT_COUNT; ++i) {
             volatile char c = map[HIT_INDEX * PAGE_SIZE];
