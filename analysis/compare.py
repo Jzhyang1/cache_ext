@@ -95,32 +95,59 @@ def markov_select_next(model, addr):
     return ret
 
 def markov_model_log_files(logfile_ref, logfile_pred, cache_size, lookahead_size, context_size):
-    assert lookahead_size <= cache_size
+    assert cache_size == 0 # we disable this for now
     model = generate_markov_model(logfile_ref, context_size)
-    cache = LRU(cache_size)
     hits = 0
     total = 0
 
     with LogFileRead(logfile_pred) as f:
         prev_addrs = [None] * context_size
+        cache = set()
         for access in f:
             if access.type != 0:
                 continue
             addr = access.page_index
             if addr in cache:
                 hits += 1
-            else:
-                cache[addr] = None
-            
+
             prev_addrs = prev_addrs[1:] + [addr]
             ref_addrs = tuple(prev_addrs)
+            cache = set()   # reset
             for _ in range(lookahead_size):
                 pred_addr = markov_select_next(model, ref_addrs)
                 if pred_addr is not None:
-                    cache[pred_addr] = None
+                    cache.add(pred_addr)
                 ref_addrs = (*ref_addrs[1:], pred_addr)
             total += 1
     print_hit_miss(hits, total)
+
+# def markov_model_log_files(logfile_ref, logfile_pred, cache_size, lookahead_size, context_size):
+#     assert lookahead_size <= cache_size
+#     model = generate_markov_model(logfile_ref, context_size)
+#     cache = LRU(cache_size)
+#     hits = 0
+#     total = 0
+
+#     with LogFileRead(logfile_pred) as f:
+#         prev_addrs = [None] * context_size
+#         for access in f:
+#             if access.type != 0:
+#                 continue
+#             addr = access.page_index
+#             if addr in cache:
+#                 hits += 1
+#             else:
+#                 cache[addr] = None
+            
+#             prev_addrs = prev_addrs[1:] + [addr]
+#             ref_addrs = tuple(prev_addrs)
+#             for _ in range(lookahead_size):
+#                 pred_addr = markov_select_next(model, ref_addrs)
+#                 if pred_addr is not None:
+#                     cache[pred_addr] = None
+#                 ref_addrs = (*ref_addrs[1:], pred_addr)
+#             total += 1
+#     print_hit_miss(hits, total)
 
 def sched_aware_markov_model_log_files(logfile_ref, logfile_pred, cache_size, lookahead_size, context_size):
     # Get all PIDs and for each, build up a list of page accesses from when the PID was certainly active
