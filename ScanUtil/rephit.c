@@ -28,16 +28,22 @@ void rephit_file(const char *filepath) {
 
     // if we have enough pages, we can just mmap and repeatedly hit the same page
     long long sum = 0;  // to prevent compiler optimization
-    if (st.st_size > HIT_INDEX * PAGE_SIZE) {
+    char *buf = malloc(PAGE_SIZE);
+    if (!buf) {
+        perror("malloc");
+        goto cleanup;
+    }
+    if (st.st_size >= (HIT_INDEX + 1) * PAGE_SIZE) {
         for (int i = 0; i < HIT_COUNT; i++) {
-            fseek(fd, HIT_INDEX * PAGE_SIZE, SEEK_SET);
-            char buf[PAGE_SIZE];
-            if (fread(buf, 1, PAGE_SIZE, fd) != PAGE_SIZE) {
+            lseek(fd, HIT_INDEX * PAGE_SIZE, SEEK_SET);
+            if (read(fd, buf, PAGE_SIZE) != PAGE_SIZE) {
                 perror("fread");
                 break;
             }
         }
     }
+cleanup:
+    free(buf);
     close(fd);
 }
 
