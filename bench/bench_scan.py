@@ -69,9 +69,7 @@ class FileSearchBenchmark(BenchmarkFramework):
             "iteration", list(range(1, self.args.iterations + 1)), configs
         )
         configs = add_config_option(
-            "page_indices",
-            parse_numbers_string(self.args.pages),
-            configs,
+            "page_indices", [self.args.pages], configs,
         )
         return configs
 
@@ -105,7 +103,9 @@ class FileSearchBenchmark(BenchmarkFramework):
         cmd += [
             data_dir
         ]
-        return [cmd + [str(page_index)] for page_index in config["page_indices"]]
+
+        page_indices = config["page_indices"].split(",")
+        return [cmd + [page_index] for page_index in page_indices]
 
     def after_benchmark(self, config):
         self.end_time = time()
