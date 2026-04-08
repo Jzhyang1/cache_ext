@@ -35,7 +35,8 @@ python3 "$BENCH_PATH/bench_scan.py" \
 	--results-file "$RESULTS_PATH/scan_fast_results.json" \
 	--data-dir "$FILES_PATH" \
 	--iterations "$ITERATIONS" \
-	--scan-util-path "$SCANUTIL_PATH/rephit.out"
+	--scan-util-path "$SCANUTIL_PATH/rephit.out"\
+	--pages "22,77"
 
 
 sudo dmesg >> "scan_fast_dmesg.log" || true

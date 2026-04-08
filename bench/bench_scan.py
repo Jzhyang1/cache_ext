@@ -47,6 +47,12 @@ class FileSearchBenchmark(BenchmarkFramework):
             default=False,
             help="Whether to do reverse scans in files (i.e. read bytes in reverse order)",
         )
+        parser.add_argument(
+            "--pages",
+            type=str,
+            default="77",
+            help="Comma-separated list of page offsets to repeatedly hit in the files (default: 77)",
+        )
 
     def generate_configs(self, configs: List[Dict]) -> List[Dict]:
         configs = add_config_option("passes", [10], configs)
@@ -61,6 +67,11 @@ class FileSearchBenchmark(BenchmarkFramework):
         configs = add_config_option("benchmark", ["filesearch"], configs)
         configs = add_config_option(
             "iteration", list(range(1, self.args.iterations + 1)), configs
+        )
+        configs = add_config_option(
+            "page_indices",
+            parse_numbers_string(self.args.pages),
+            configs,
         )
         return configs
 
@@ -94,7 +105,7 @@ class FileSearchBenchmark(BenchmarkFramework):
         cmd += [
             data_dir
         ]
-        return [cmd]
+        return [cmd + [str(page_index)] for page_index in config["page_indices"]]
 
     def after_benchmark(self, config):
         self.end_time = time()

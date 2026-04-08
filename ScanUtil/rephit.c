@@ -9,10 +9,9 @@
 #include <stdbool.h>
 
 #define PAGE_SIZE 4096
-#define HIT_INDEX 77 // arbitrary page offset to repeatedly hit
-#define HIT_COUNT 100
+#define HIT_COUNT 1000
 
-void rephit_file(const char *filepath) {
+void rephit_file(const char *filepath, uint64_t page_index) {
     int fd = open(filepath, O_RDONLY);
     if (fd < 0) {
         perror(filepath);
@@ -33,9 +32,9 @@ void rephit_file(const char *filepath) {
         perror("malloc");
         goto cleanup;
     }
-    if (st.st_size >= (HIT_INDEX + 1) * PAGE_SIZE) {
+    if (st.st_size >= (page_index + 1) * PAGE_SIZE) {
         for (int i = 0; i < HIT_COUNT; i++) {
-            lseek(fd, HIT_INDEX * PAGE_SIZE, SEEK_SET);
+            lseek(fd, page_index * PAGE_SIZE, SEEK_SET);
             if (read(fd, buf, PAGE_SIZE) != PAGE_SIZE) {
                 perror("fread");
                 break;
@@ -47,7 +46,7 @@ cleanup:
     close(fd);
 }
 
-void rephit_dir(const char *dirpath) {
+void rephit_dir(const char *dirpath, uint64_t page_index) {
     DIR *dir = opendir(dirpath);
     if (!dir) {
         perror(dirpath);
@@ -63,25 +62,25 @@ void rephit_dir(const char *dirpath) {
                 continue;
             // Recursively scan subdirectories
             snprintf(filepath, sizeof(filepath), "%s/%s", dirpath, entry->d_name);
-            rephit_dir(filepath);
+            rephit_dir(filepath, page_index);
             continue;
         }
         if (entry->d_type != DT_REG)
             continue; // Only regular files
 
         snprintf(filepath, sizeof(filepath), "%s/%s", dirpath, entry->d_name);
-        rephit_file(filepath);
+        rephit_file(filepath, page_index);
     }
 
     closedir(dir);
 }
 
-const char *usage = "Usage: rephit <directory> <syncpipe>\n";
+const char *usage = "Usage: rephit <directory> <syncpipe> <page_index>\n";
 char syncpipe_buf[256];
 int syncpipe_buf_len = 0;
 
 int main(int argc, char *argv[]) {
-    if (argc < 3) {
+    if (argc < 4) {
         fprintf(stderr, "Error: %s", usage);
         return 1;
     }
@@ -89,6 +88,12 @@ int main(int argc, char *argv[]) {
     bool reverse = false;
     char* dirpath = argv[1];
     char* syncpipe_name = argv[2];
+
+    uint64_t page_index;
+    if (sscanf(argv[3], "%lu", &page_index) != 1) {
+        fprintf(stderr, "Invalid page index: %s\n", argv[3]);
+        return 1;
+    }
 
     strncpy(syncpipe_buf, syncpipe_name, sizeof(syncpipe_buf) - 1);
     syncpipe_buf[sizeof(syncpipe_buf) - 1] = '\0';
@@ -129,6 +134,6 @@ int main(int argc, char *argv[]) {
     }
     close(fd);
 
-    rephit_dir(dirpath);
+    rephit_dir(dirpath, page_index);
     return 0;
 }
