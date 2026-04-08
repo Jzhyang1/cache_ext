@@ -76,7 +76,7 @@ void rephit_dir(const char *dirpath, uint64_t page_index) {
     closedir(dir);
 }
 
-const char *usage = "Usage: rephit <directory> <syncpipe> <page_index>\n";
+const char *usage = "Usage: rephit <directory> <page_index> <syncpipe>\n";
 char syncpipe_buf[256];
 int syncpipe_buf_len = 0;
 
@@ -88,11 +88,11 @@ int main(int argc, char *argv[]) {
 
     bool reverse = false;
     char* dirpath = argv[1];
-    char* syncpipe_name = argv[2];
+    char* syncpipe_name = argv[3];
 
     uint64_t page_index;
-    if (sscanf(argv[3], "%lu", &page_index) != 1) {
-        fprintf(stderr, "Invalid page index: %s\n", argv[3]);
+    if (sscanf(argv[2], "%lu", &page_index) != 1) {
+        fprintf(stderr, "Invalid page index: %s\n", argv[2]);
         return 1;
     }
 
