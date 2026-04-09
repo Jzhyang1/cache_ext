@@ -5,7 +5,7 @@
 # on their on log files (by PID - see compare.py), and a histogram of the page
 # indices (see hist.py)
 
-from compare import markov_model_log_files
+from compare import markov_model_log_files, LogFileRead
 from cache import cache_log_file
 from hist import plot
 from argparse import ArgumentParser
@@ -37,11 +37,9 @@ if __name__ == '__main__':
             markov_model_log_files(logfile_each[i], logfile_each[j], 0, 1, 1)
 
     # Generate the histogram of page indices for each PID
-    for pid in pids:
+    for page_accesses in logfile_each:
         data = []
-        with open(logfile, 'r') as f:
+        with LogFileRead(page_accesses) as f:
             for line in f:
-                tokens = line.split()
-                if int(tokens[1]) == pid:
-                    data.append(float(tokens[3]))  # Assuming page index is the 4th token
-        plot(f'{logfile}_pid_{pid}', data, bins=50)
+                data.append(line.page_index)
+        plot(page_accesses, data)
