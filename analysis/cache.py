@@ -27,6 +27,7 @@ def cache_log_file(logfile, pid_admit_set: set[int]):
             elif access.type == 0:
                 if active_count > 0:
                     g(access.nr_event, access.type, access.drop_count, access.address_space, access.page_index)
+    return logfile_cache
 
 def first_last_instance_of_pid(logfile, pids: set[int]):
     from compare import LogFileRead

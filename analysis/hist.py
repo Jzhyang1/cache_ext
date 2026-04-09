@@ -3,6 +3,12 @@ import matplotlib.pyplot as plt
 import numpy as np
 from argparse import ArgumentParser
 
+def plot(name, data, bins=50):
+    plt.hist(data, bins=bins)
+    plt.xlabel('Value')
+    plt.ylabel('Frequency')
+    plt.title('Histogram')
+    plt.savefig(f'{name}_histogram.png')
 
 if __name__ == '__main__':
     '''accept arguments for a file and idx where idx is the nth token on a line'''
@@ -15,8 +21,4 @@ if __name__ == '__main__':
     with open(args.file, 'r') as f:
         data = [float(line.split()[args.idx]) for line in f]
 
-    plt.hist(data, bins=args.bins)
-    plt.xlabel('Value')
-    plt.ylabel('Frequency')
-    plt.title('Histogram')
-    plt.savefig(f'{args.file}_histogram.png')
+    plot(args.file, data, bins=args.bins)
