@@ -50,7 +50,7 @@ void BPF_STRUCT_OPS(lru_folio_added, struct folio *folio) {
 	// bpf_printk("lru_folio_added called on %x -> %d\n", folio, miss_counter);
 }
 
-void BPF_STRUCT_OPS(lru_prefetch_folios, struct cache_ext_prefetch_ctx *ctx, struct mem_cgroup *memcg, struct folio *folio) {
+void BPF_STRUCT_OPS(lru_prefetch_folios, struct cache_ext_prefetch_ctx *prefetch_ctx, struct mem_cgroup *memcg, struct folio *folio) {
 	if (!is_folio_relevant(folio))
 		return;
 
