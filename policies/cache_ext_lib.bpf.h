@@ -274,11 +274,13 @@ static inline u32 bpf_get_random_biased(u32 max) {
 static u64 volatile access_counter = 0;
 static u64 volatile miss_counter = 0;
 static u64 volatile evict_counter = 0;
+static u64 volatile prefetch_counter = 0;
 
 static void __always_inline reset_counters() {
 	access_counter = 0;
 	miss_counter = 0;
 	evict_counter = 0;
+	prefetch_counter = 0;
 }
 
 static void __always_inline increment_access_counter() {
@@ -293,13 +295,18 @@ static void __always_inline increment_evict_counter() {
 	__sync_fetch_and_add(&evict_counter, 1);
 }
 
+static void __always_inline increment_prefetch_counter() {
+	__sync_fetch_and_add(&prefetch_counter, 1);
+}
+
 // Map to access stats in user space
 #define ACCESS_INDEX 0
 #define MISSES_INDEX 1
 #define EVICTS_INDEX 2
+#define PREFETCH_INDEX 3
 struct {
     __uint(type, BPF_MAP_TYPE_ARRAY);
-    __uint(max_entries, 3);
+    __uint(max_entries, 4);
     __type(key, u32);
     __type(value, u64);
 } cache_stats SEC(".maps");
@@ -309,9 +316,11 @@ void save_cache_stats(void* ctx) {
 	u32 access_index = ACCESS_INDEX;
 	u32 misses_index = MISSES_INDEX;
 	u32 evicts_index = EVICTS_INDEX;
+	u32 prefetch_index = PREFETCH_INDEX;
 	bpf_map_update_elem(&cache_stats, &access_index, &access_counter, BPF_ANY);
 	bpf_map_update_elem(&cache_stats, &misses_index, &miss_counter, BPF_ANY);
 	bpf_map_update_elem(&cache_stats, &evicts_index, &evict_counter, BPF_ANY);
+	bpf_map_update_elem(&cache_stats, &prefetch_index, &prefetch_counter, BPF_ANY);
 }
 
 #endif /* _CACHE_EXT_LIB_BPF_H */

@@ -104,5 +104,9 @@ static void print_cache_stats(cache_ext_bpf *skel) {
     if (bpf_map_lookup_elem(bpf_map__fd(skel->maps.cache_stats), &key, &value) == 0)
         fprintf(fp, "Evicts: %lu\n", value);
 
+    key = 3; // prefetches
+    if (bpf_map_lookup_elem(bpf_map__fd(skel->maps.cache_stats), &key, &value) == 0)
+        fprintf(fp, "Prefetches: %lu\n", value);
+
     fclose(fp);
 }

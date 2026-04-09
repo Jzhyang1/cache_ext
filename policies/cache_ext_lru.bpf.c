@@ -50,6 +50,14 @@ void BPF_STRUCT_OPS(lru_folio_added, struct folio *folio) {
 	// bpf_printk("lru_folio_added called on %x -> %d\n", folio, miss_counter);
 }
 
+void BPF_STRUCT_OPS(lru_prefetch_folios, struct cache_ext_prefetch_ctx *ctx, struct mem_cgroup *memcg, struct folio *folio) {
+	if (!is_folio_relevant(folio))
+		return;
+
+	// For now, we just increment the prefetch counter to see if this is called at all.
+	increment_prefetch_counter();
+}
+
 SEC(".struct_ops.link")
 struct cache_ext_ops lru_ops = {
 	.init = (void *)lru_init,
@@ -57,4 +65,5 @@ struct cache_ext_ops lru_ops = {
 	.folio_accessed = (void *)lru_folio_accessed,
 	.folio_evicted = (void *)lru_folio_evicted,
 	.folio_added = (void *)lru_folio_added,
+	.prefetch_folios = (void *)lru_prefetch_folios,
 };
