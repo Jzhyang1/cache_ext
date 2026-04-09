@@ -79,12 +79,12 @@ void scan_dir(const char *dirpath, bool reverse) {
     closedir(dir);
 }
 
-const char *usage = "Usage: scan [-r] <directory> <syncpipe>\n";
+const char *usage = "Usage: scan [-r] <directory> <page_index> <syncpipe>\n";
 char syncpipe_buf[256];
 int syncpipe_buf_len = 0;
 
 int main(int argc, char *argv[]) {
-    if (argc < 3) {
+    if (argc < 4) {
         fprintf(stderr, "%s", usage);
         return 1;
     }
@@ -95,10 +95,10 @@ int main(int argc, char *argv[]) {
     if (argc >= 4 && strcmp(argv[1], "-r") == 0) {
         reverse = true;
         dirpath = argv[2];
-        syncpipe_name = argv[3];
+        syncpipe_name = argv[4];
     } else {
         dirpath = argv[1];
-        syncpipe_name = argv[2];
+        syncpipe_name = argv[3];
     }
     strncpy(syncpipe_buf, syncpipe_name, sizeof(syncpipe_buf) - 1);
     syncpipe_buf[sizeof(syncpipe_buf) - 1] = '\0';
