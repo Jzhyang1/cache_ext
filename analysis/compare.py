@@ -304,8 +304,8 @@ def sanity_check(logfile_ref, logfile_pred, **kwargs):
         range_n = cur_n - start_n + 1
         missing = range_n - count
         print(f"Scheduler consistent with {pid_matched_to/len(pid_nexts) if pid_nexts else 0:.2%} of page accesses")
-        print(f"Missing entries in {logfile} log: {missing} of {range_n} ({missing / range_n:.2%})")
-        print(f"Source says missing {source_says} of {cur_n} ({source_says / cur_n:.2%})")
+        print(f"Missing entries in {logfile} log: {missing} of {range_n} ({missing / range_n if range_n > 0 else 0:.2%})")
+        print(f"Source says missing {source_says} of {cur_n} ({source_says / cur_n if cur_n > 0 else 0:.2%})")
 
 def compare_log_files(logfile_ref, logfile_pred, **kwargs):
     # Ignore cache_size and lookahead_size
