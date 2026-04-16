@@ -66,6 +66,9 @@ struct userspace_event {
 		struct {
 			uint64_t address_space;
 			uint64_t index;	// page offset in file
+			// these two are the state of the runqueue at the time of the accesses
+			uint32_t pid_self;
+			uint32_t pid_next;
 		};
 		struct {
 			uint64_t prev_pid;

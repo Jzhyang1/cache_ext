@@ -26,10 +26,11 @@ try:
             return False
         def __len__(self):
             return 0
-    def LRU(size):
+    def LRUExists(size):
         if size == 0:
             return EmptyLRUDict()
         return LRUImpl(size)
+    LRU = LRUExists
 except ImportError:
     def LRUMissing(size):
         if args.ignore_lru:
@@ -196,7 +197,10 @@ def sched_aware_markov_model_log_files(logfile_ref, logfile_pred, cache_size, lo
                 elif access.type == 0:
                     for pid in active_pids:
                         if pid in pid_writes:
-                            pid_writes[pid](access.nr_event, access.type, access.drop_count, access.address_space, access.page_index)
+                            pid_writes[pid](
+                                access.nr_event, access.type, access.drop_count, 
+                                access.address_space, access.page_index, access.pid_self, access.pid_next
+                            )
     for pid, cache_file in pid_caches.items():
         cache_file.__exit__(None, None, None)
         print("[", pid, "]")
@@ -306,19 +310,22 @@ methods = {
 
 
 class LogEntry:
-    # every log entry is a 32-byte struct
+    # every log entry is a 40-byte struct
     # 0-8: nr_event
     # 8-12: type (always 0)
     # 12-16: drop_count
     # 16-24: address_space
     # 24-32: page_index
-    def __init__(self, nr_event, type, drop_count, address_space, page_index):
+    # 32-36: pid_self
+    # 36-40: pid_next
+    def __init__(self, nr_event, type, drop_count, address_space, page_index, pid_self, pid_next):
         self.nr_event = nr_event
         self.type = type
         self.drop_count = drop_count
         self.address_space = address_space
         self.page_index = page_index
-
+        self.pid_self = pid_self
+        self.pid_next = pid_next
 class LogFileIterator:
     def __init__(self, file):
         self.file = file
@@ -327,7 +334,7 @@ class LogFileIterator:
         return self
     
     def __next__(self):
-        data = self.file.read(32)
+        data = self.file.read(40)
         if not data:
             raise StopIteration
         nr_event = int.from_bytes(data[0:8], 'little')
@@ -335,7 +342,9 @@ class LogFileIterator:
         drop_count = int.from_bytes(data[12:16], 'little')
         address_space = int.from_bytes(data[16:24], 'little')
         page_index = int.from_bytes(data[24:32], 'little')
-        return LogEntry(nr_event, type, drop_count, address_space, page_index)
+        pid_self = int.from_bytes(data[32:36], 'little')
+        pid_next = int.from_bytes(data[36:40], 'little')
+        return LogEntry(nr_event, type, drop_count, address_space, page_index, pid_self, pid_next)
 
 class LogFileRead:
     def __init__(self, path):
@@ -356,13 +365,15 @@ class LogFileWrite:
     def exists(self):
         return os.path.exists(self.path)
     def __enter__(self):
-        self.file = open(self.path, 'wb')
-        def write_entry(nr_event, type, drop_count, address_space, page_index):
-            self.file.write(nr_event.to_bytes(8, 'little') +
+        self.file = f = open(self.path, 'wb')
+        def write_entry(nr_event, type, drop_count, address_space, page_index, pid_self, pid_next):
+            f.write(nr_event.to_bytes(8, 'little') +
                     type.to_bytes(4, 'little') +
                     drop_count.to_bytes(4, 'little') +
                     address_space.to_bytes(8, 'little') +
-                    page_index.to_bytes(8, 'little'))
+                    page_index.to_bytes(8, 'little') +
+                    pid_self.to_bytes(4, 'little') +
+                    pid_next.to_bytes(4, 'little'))
         return write_entry 
     
     def __exit__(self, exc_type, exc_value, traceback):

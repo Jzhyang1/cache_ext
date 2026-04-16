@@ -26,6 +26,9 @@ struct userspace_event {
 		struct {
 			u64 address_space;
 			u64 index;	// page offset in file
+			// these two are the state of the runqueue at the time of the accesses
+			u32 pid_self;
+			u32 pid_next;
 		};
 		struct {
 			u64 prev_pid;
@@ -90,6 +93,30 @@ void BPF_STRUCT_OPS(log_folio_accessed, struct folio *folio) {
     if (!is_folio_relevant(folio))
         return;
 
+	// 0. Get data from EEVDF scheduler
+	pid_t pid_self = bpf_get_current_pid_tgid() >> 32;
+	pid_t pid_next = (pid_t)(-1); // default value if we can't get next PID
+	{
+		struct task_struct *task = (struct task_struct *)bpf_get_current_task_btf();
+    
+		// 1. Get the runqueue for the current CPU
+		// We use BPF CO-RE to safely read the 'se' (sched_entity)
+		struct sched_entity *se = &task->se;
+		struct cfs_rq *cfs_rq = BPF_CORE_READ(se, cfs_rq);
+		
+		// 2. In CFS/EEVDF, the 'next' task is often cached in 'next' or 'leftmost'
+		// This depends heavily on specific EEVDF implementation
+		struct sched_entity *next_se = BPF_CORE_READ(cfs_rq, next);
+		
+		if (next_se) {
+			// 3. Convert the sched_entity back to a task_struct
+			// container_of(next_se, struct task_struct, se)
+			struct task_struct *next_task = ((struct task_struct *)next_se) - offsetof(struct task_struct, se);
+			
+			pid_next = BPF_CORE_READ(next_task, pid);
+		}
+	}
+
     // 1. Reserve space directly in the ring buffer
     struct userspace_event *event = bpf_ringbuf_reserve(&userspace_events, sizeof(*event), 0);
     
@@ -106,6 +133,8 @@ void BPF_STRUCT_OPS(log_folio_accessed, struct folio *folio) {
     event->nr_event = __atomic_fetch_add(&access_count, 1, __ATOMIC_ACQ_REL);
 	event->drop_count = drop_count;
     event->type = EVENT_PAGE_ACCESS;
+	event->pid_self = pid_self;
+	event->pid_next = pid_next;
 
     // 4. Commit the data to userspace
     bpf_ringbuf_submit(event, 0);
