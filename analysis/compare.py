@@ -271,10 +271,29 @@ def sanity_check(logfile_ref, logfile_pred, **kwargs):
     # Counts the missing access log entries in logfile_pred and logfile_ref
     for logfile in [logfile_ref, logfile_pred]:
         if logfile is None: continue
+
+        # Check that PIDs are consistent between sched logs and page access logs
+        active_pids = set() # PIDs in runqueue based on sched logs
+        pid_nexts = []      # Assume that the runqueue doesn't change 
+        pid_matched_to = 0  #  then we can go through the pid_nexts and match to each sched interrupt
         with LogFileRead(logfile) as f:
             start_n, cur_n, count = None, 0, 0
             source_says = 0
             for access in f:
+                if access.type == 1:
+                    # page_index is dst_pid for type == 1
+                    active_pids.discard(access.address_space)
+                    active_pids.add(access.page_index)
+                    if pid_matched_to < len(pid_nexts) and access.page_index == pid_nexts[pid_matched_to]:
+                        # our scheduler log is consistent with the scheduler state logged during page accesses
+                        pid_matched_to += 1
+                elif access.type == 0:
+                    if (len(pid_nexts) == 0 or access.pid_next != pid_nexts[-1])\
+                          and access.pid_next > 100: # any pid_next <= 100 is likely an OS activity
+                        pid_nexts.append(access.pid_next)
+                    if access.pid_self not in active_pids:
+                        perror(f"Access with PID {access.pid_self} not in active PIDs {active_pids}")
+
                 got_n = access.nr_event
                 source_says = access.drop_count
                 if start_n is None:
@@ -284,6 +303,7 @@ def sanity_check(logfile_ref, logfile_pred, **kwargs):
         if start_n is None: start_n = 0
         range_n = cur_n - start_n + 1
         missing = range_n - count
+        print(f"Scheduler consistent with {pid_matched_to/len(pid_nexts) if pid_nexts else 0:.2%} of page accesses")
         print(f"Missing entries in {logfile} log: {missing} of {range_n} ({missing / range_n:.2%})")
         print(f"Source says missing {source_says} of {cur_n} ({source_says / cur_n:.2%})")
 
