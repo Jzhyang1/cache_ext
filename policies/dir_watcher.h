@@ -107,6 +107,7 @@ int initialize_pid_watch_map(const char *pid_list_str, int pid_watch_map_fd) {
 			free(pids_copy);
 			return -1;
 		}
+		printf("Watching for pid: %lu\n", val);
 		pid_str = strtok_r(NULL, ",", &saveptr);
 	}
 	free(pids_copy);
