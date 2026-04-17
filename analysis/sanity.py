@@ -20,12 +20,15 @@ def sanity_check(logfile):
 
     pid_nexts = []      # Assume that the runqueue doesn't change 
     pid_matched_to = 0  #  then we can go through the pid_nexts and match to each sched interrupt
+
+    first_access, first_sched = None, None  # track when accesses and scheduler events come in
     with LogFileRead(logfile) as f:
         for access in f:
             if access.type == 1:
                 # page_index is dst_pid for type == 1
                 active_pids.discard(access.address_space)
                 active_pids.add(access.page_index)
+                if first_sched is None: first_sched = access.nr_event
                 if pid_matched_to < len(pid_nexts) and access.page_index == pid_nexts[pid_matched_to]:
                     # our scheduler log is consistent with the scheduler state logged during page accesses
                     pid_matched_to += 1
@@ -34,6 +37,7 @@ def sanity_check(logfile):
                 if (len(pid_nexts) == 0 or access.pid_next != pid_nexts[-1])\
                         and access.pid_next > 100: # any pid_next <= 100 is likely an OS activity
                     pid_nexts.append(access.pid_next)
+                if first_access is None: first_access = access.nr_event
                 if access.pid_self not in active_pids:
                     print("accessing", access.pid_self, "which is not active in", active_pids)
                     pid_access_not_active += 1
