@@ -1,7 +1,13 @@
 
-from analysis.compare import LogFileRead
+
+import os
+import sys
 from argparse import ArgumentParser
 
+# Adds the directory containing this file to the search path
+sys.path.append(os.path.dirname(os.path.abspath(__file__)))
+
+from compare import LogFileRead
 
 def sanity_check(logfile):
     start_n, cur_n, count = None, 0, 0  # the ordering numbers of the events for drop count
