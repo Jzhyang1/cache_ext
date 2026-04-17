@@ -276,6 +276,8 @@ def sanity_check(logfile_ref, logfile_pred, **kwargs):
         active_pids = set() # PIDs in runqueue based on sched logs
         pid_nexts = []      # Assume that the runqueue doesn't change 
         pid_matched_to = 0  #  then we can go through the pid_nexts and match to each sched interrupt
+        pid_access_not_active = 0 # Count accesses where the pid_self is not in active_pids, which shouldn't happen
+        pid_access_total = 0    # Total count of accesses to compare against pid_access_not_active
         with LogFileRead(logfile) as f:
             start_n, cur_n, count = None, 0, 0
             source_says = 0
@@ -292,7 +294,8 @@ def sanity_check(logfile_ref, logfile_pred, **kwargs):
                           and access.pid_next > 100: # any pid_next <= 100 is likely an OS activity
                         pid_nexts.append(access.pid_next)
                     if access.pid_self not in active_pids:
-                        perror(f"Access with PID {access.pid_self} not in active PIDs {active_pids}")
+                        pid_access_not_active += 1
+                    pid_access_total += 1
 
                 got_n = access.nr_event
                 source_says = access.drop_count
@@ -303,9 +306,10 @@ def sanity_check(logfile_ref, logfile_pred, **kwargs):
         if start_n is None: start_n = 0
         range_n = cur_n - start_n + 1
         missing = range_n - count
-        print(f"Scheduler consistent with {pid_matched_to/len(pid_nexts) if pid_nexts else 0:.2%} of page accesses")
         print(f"Missing entries in {logfile} log: {missing} of {range_n} ({missing / range_n if range_n > 0 else 0:.2%})")
         print(f"Source says missing {source_says} of {cur_n} ({source_says / cur_n if cur_n > 0 else 0:.2%})")
+        print(f"Scheduler consistent with {pid_matched_to/len(pid_nexts) if pid_nexts else 0:.2%} of page accesses")
+        print(f"Accesses with non-active PIDs: {pid_access_not_active} of {pid_access_total} ({pid_access_not_active / pid_access_total if pid_access_total > 0 else 0:.2%})")
 
 def compare_log_files(logfile_ref, logfile_pred, **kwargs):
     # Ignore cache_size and lookahead_size
