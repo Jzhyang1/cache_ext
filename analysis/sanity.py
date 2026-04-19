@@ -15,6 +15,8 @@ def sanity_check(logfile):
     
     sched_events, page_access_events = 0, 0
 
+    all_sched_pids = set()    # all PIDs seen in sched logs, for sanity checking against page access logs
+    all_access_pids = set()   # all PIDs seen in page access logs, for sanity checking against sched logs
     active_pids = set() # PIDs in runqueue based on sched logs
     pid_access_not_active = 0 # Count accesses where the pid_self is not in active_pids, which shouldn't happen
 
@@ -26,6 +28,9 @@ def sanity_check(logfile):
         for access in f:
             if access.type == 1:
                 # page_index is dst_pid for type == 1
+                all_sched_pids.add(access.address_space)
+                all_sched_pids.add(access.page_index)
+
                 active_pids.discard(access.address_space)
                 active_pids.add(access.page_index)
                 if first_sched is None: first_sched = access.nr_event
@@ -34,12 +39,14 @@ def sanity_check(logfile):
                     pid_matched_to += 1
                 sched_events += 1
             elif access.type == 0:
+                all_access_pids.add(access.pid_self)
+                all_access_pids.add(access.pid_next)
+
                 if (len(pid_nexts) == 0 or access.pid_next != pid_nexts[-1])\
                         and access.pid_next > 100: # any pid_next <= 100 is likely an OS activity
                     pid_nexts.append(access.pid_next)
                 if first_access is None: first_access = access.nr_event
                 if access.pid_self not in active_pids:
-                    print("accessing", access.pid_self, "which is not active in", active_pids)
                     pid_access_not_active += 1
                 page_access_events += 1
 
@@ -57,6 +64,8 @@ def sanity_check(logfile):
     print(f"Source says missing {source_says} of {cur_n} ({source_says / cur_n if cur_n > 0 else 0:.2%})")
     print(f"Scheduler consistent with {pid_matched_to} of {len(pid_nexts)} ({pid_matched_to/len(pid_nexts) if pid_nexts else 0:.2%}) of page accesses")
     print(f"Accesses with non-active PIDs: {pid_access_not_active} of {page_access_events} ({pid_access_not_active / page_access_events if page_access_events > 0 else 0:.2%})")
+    print("Unique PIDs in scheduler logs:", all_sched_pids)
+    print("Unique PIDs in page access logs:", all_access_pids)
 
 if __name__ == '__main__':
     parser = ArgumentParser(description='Sanity check for log files')
