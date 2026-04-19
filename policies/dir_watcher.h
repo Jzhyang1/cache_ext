@@ -102,12 +102,14 @@ int initialize_pid_watch_map(const char *pid_list_str, int pid_watch_map_fd) {
 			free(pids_copy);
 			return -1;
 		}
-		if (bpf_map_update_elem(pid_watch_map_fd, &val, &is_valid, 0) != 0) {
-			perror("Failed to update pid_watch map");
-			free(pids_copy);
-			return -1;
+		for (int allowed_err = -3; allowed_err <= 3; ++allowed_err) {
+			uint32_t val_adjusted = val + allowed_err;
+			if (bpf_map_update_elem(pid_watch_map_fd, &val_adjusted, &is_valid, 0) != 0) {
+				perror("Failed to update pid_watch map");
+				free(pids_copy);
+				return -1;
+			}
 		}
-		printf("Watching for pid: %u\n", val);
 		pid_str = strtok_r(NULL, ",", &saveptr);
 	}
 	free(pids_copy);
