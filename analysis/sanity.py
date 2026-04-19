@@ -29,13 +29,13 @@ def sanity_check(logfile):
         for access in f:
             if access.type == 1:
                 # page_index is dst_pid for type == 1
-                all_sched_pids.add(access.address_space)
-                all_sched_pids.add(access.page_index)
+                all_sched_pids.add(access.sched_pid_prev)
+                all_sched_pids.add(access.sched_pid_next)
 
-                active_pids.discard(access.address_space)
-                active_pids.add(access.page_index)
+                active_pids.discard(access.sched_pid_prev)
+                active_pids.add(access.sched_pid_next)
                 if first_sched is None: first_sched = access.nr_event
-                if pid_matched_to < len(pid_nexts) and access.page_index == pid_nexts[pid_matched_to]:
+                if pid_matched_to < len(pid_nexts) and access.sched_pid_next == pid_nexts[pid_matched_to]:
                     # our scheduler log is consistent with the scheduler state logged during page accesses
                     pid_matched_to += 1
                 sched_events += 1

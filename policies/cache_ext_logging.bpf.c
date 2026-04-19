@@ -26,15 +26,15 @@ struct userspace_event {
 		struct {
 			u64 address_space;
 			u64 index;	// page offset in file
-			// these two are the state of the runqueue at the time of the accesses
-			u32 pid_self;
-			u32 pid_next;
 		};
 		struct {
 			u64 prev_pid;
 			u64 next_pid;
 		};
 	};
+	// these two are the state of the runqueue at the time of the accesses
+	u32 pid_self;
+	u32 pid_next;
 };
 
 struct {
@@ -194,6 +194,8 @@ int bpf_prog_sched_switch(struct trace_event_raw_sched_switch *ctx) {
     // 3. Write directly to the reserved memory (Zero-Copy)
     event->prev_pid = prev_pid;
     event->next_pid = next_pid;
+	event->pid_self = prev_pid;
+	event->pid_next = next_pid;
     event->nr_event = __atomic_fetch_add(&access_count, 1, __ATOMIC_ACQ_REL);
 	event->drop_count = drop_count;
     event->type = EVENT_SCHED_SWITCH;

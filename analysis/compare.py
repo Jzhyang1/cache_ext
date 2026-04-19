@@ -303,6 +303,8 @@ class LogEntry:
         self.drop_count = drop_count
         self.address_space = address_space
         self.page_index = page_index
+        self.sched_pid_prev = self.address_space
+        self.sched_pid_next = self.page_index
         self.pid_self = pid_self
         self.pid_next = pid_next
 class LogFileIterator:
