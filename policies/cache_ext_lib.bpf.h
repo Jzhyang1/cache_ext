@@ -96,6 +96,13 @@ int bpf_cache_ext_list_sample(struct mem_cgroup *memcg, u64 list,
 			      struct cache_ext_eviction_ctx *ctx) __ksym;
 u64 bpf_cache_ext_ds_registry_new_list(struct mem_cgroup *memcg) __ksym;
 
+
+struct cache_ext_pid_pair {
+	__u32 pid1, pid2;
+};
+struct cache_ext_pid_pair bpf_cache_ext_get_sched(void) __ksym;
+
+
 struct address_space *bpf_cache_ext_mapping_acquire(struct address_space *mapping) __ksym;
 void bpf_cache_ext_mapping_release(struct address_space *mapping) __ksym;
 void bpf_cache_ext_prefetch(u64 mapping, pgoff_t index, unsigned long nr_pages) __ksym;
