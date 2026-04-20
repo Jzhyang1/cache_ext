@@ -15,27 +15,31 @@ from lru import LRU
 
 
 def build_markov_model(logfile_ref, context_size):
-    hist = {}    # maps {addr: {next_addr: count}}
+    # Build Markov model that includes the current and next PID in the state
+    hist = {}
+    prev_state = [None] * context_size  # we will keep track of the last context_size states to use as the state for the Markov model
     with LogFileRead(logfile_ref) as f:
-        prev_addrs = [None] * context_size
         for access in f:
             if access.type != 0:
-                continue
-            addr = access.page_index
-            minihist = hist.setdefault(tuple(prev_addrs), {})
-            minihist[addr] = minihist.get(addr, 0) + 1
-            prev_addrs = prev_addrs[1:] + [addr]
-    # Compile hist into a map {addr: [(PDF, next_addr)]}
-    ret = {}
-    for addr, entries in hist.items():
-        total = sum(entries.values())
+                continue    # we only handle page-access events
+            
+            minihist = hist.setdefault(tuple(prev_state), {})
+            minihist[access.page_index] = minihist.get(access.page_index, 0) + 1
+            # new state is the page index, the current PID, and the next PID
+            state = (access.page_index)
+            prev_state = prev_state[1:] + [state]
+    model = {}
+    for state, next_pages in hist.items():
+        total = sum(next_pages.values())
         accum, miniret = 0, []
-        for next_addr, count in entries.items():
-            accum += count
-            miniret.append((accum/total, next_addr))
-        ret[addr] = miniret
-    print("model is of size", len(ret))
-    return ret
+        for page, count in next_pages.items():
+            prob = count / total
+            if prob < 0.02:
+                continue    # skip very unlikely transitions to save space
+            accum += prob
+            miniret.append((page, accum))
+        model[state] = miniret
+    return model
 
 def predict_markov_next_page(model, current_state):
     # Given the current state, predict the next page index using the Markov model
@@ -64,8 +68,8 @@ def page_only_markov_model_log_files(logfile_ref, logfile_pred, cache_size, look
                 continue
             addr = access.page_index
             if addr in cache:
-                cache[addr] = cache.get(addr, 0) + 1
                 hits += 1
+            cache[addr] = cache.get(addr, 0) + 1
             state = (addr)
 
             prev_state = prev_state[1:] + [state]

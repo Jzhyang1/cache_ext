@@ -63,8 +63,8 @@ def sched_aware_markov_model_log_file(logfile_ref, logfile_pred, cache_size, loo
                 continue
             addr = access.page_index
             if addr in cache:
-                cache[addr] = cache.get(addr, 0) + 1
                 hits += 1
+            cache[addr] = cache.get(addr, 0) + 1
             state = (addr, access.pid_self, access.pid_next)
 
             prev_state = prev_state[1:] + [state]
