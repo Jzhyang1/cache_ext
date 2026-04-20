@@ -52,6 +52,7 @@ def predict_markov_next_page(model, current_state):
 def sched_aware_markov_model_log_file(logfile_ref, logfile_pred, cache_size, lookahead_size, context_size):
     assert lookahead_size == 1
     model = build_markov_model(logfile_ref, context_size)
+    print("model is size", len(model))
 
     hits, total = 0, 0
     with LogFileRead(logfile_pred) as f:
