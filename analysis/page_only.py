@@ -41,21 +41,22 @@ def build_markov_model(logfile_ref, context_size):
         model[state] = miniret
     return model
 
-def predict_markov_next_page(model, current_state):
+def predict_markov_next_page(model, current_state, count):
     # Given the current state, predict the next page index using the Markov model
     # returns a randomly sampled next page index
     if current_state not in model:
-        return None  # we have no data for this state
+        return []  # we have no data for this state
     next_pages = model[current_state]
-    r = random.random()
-    for page, accum_prob in next_pages:
-        if r < accum_prob:
-            return page
-    return predict_markov_next_page(model, current_state)  # in case of rounding errors, resample
+    ret = []
+    for _ in range(count):
+        r = random.random()
+        for page, accum_prob in next_pages:
+            if r < accum_prob:
+                ret.append(page)
+    return ret
 
 
 def page_only_markov_model_log_files(logfile_ref, logfile_pred, cache_size, lookahead_size, context_size):
-    assert lookahead_size == 1
     model = build_markov_model(logfile_ref, context_size)
     print("model is size", len(model))
     
@@ -73,8 +74,7 @@ def page_only_markov_model_log_files(logfile_ref, logfile_pred, cache_size, look
             state = (addr)
 
             prev_state = prev_state[1:] + [state]
-            pred_addr = predict_markov_next_page(model, tuple(prev_state))
-            if pred_addr is not None:
+            for pred_addr in predict_markov_next_page(model, tuple(prev_state), lookahead_size):
                 cache[pred_addr] = cache.get(pred_addr, 0) + 1
             total += 1
 
