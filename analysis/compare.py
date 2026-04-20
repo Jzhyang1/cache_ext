@@ -364,9 +364,9 @@ if __name__ == "__main__":
     argparser.add_argument('method', type=str, help='The method to run, can be one of the following: ' + ','.join(methods.keys()))
     argparser.add_argument('logfile_ref', type=str, help='Path to the reference log file')
     argparser.add_argument('logfile_pred', type=str, default=None, help='Path to the predicted log file')
-    argparser.add_argument('--size', '-s', type=int, default=1, help='Cache size in number of pages')
-    argparser.add_argument('--lookahead', '-l', type=int, default=0, help='Lookahead size in number of pages')
-    argparser.add_argument('--context-size', '-c', type=int, default=1, help='Context size for the Markov model (only used for the "model" method)')
+    argparser.add_argument('--cache-size', '-c', type=int, default=0, help='size of the cache to simulate (0 for unlimited)')
+    argparser.add_argument('--lookahead-size', '-l', type=int, default=1, help='number of future accesses to predict and include in the cache')
+    argparser.add_argument('--context-size', '-t', type=int, default=3, help='number of past accesses to include in the state for the Markov model')
     argparser.add_argument('--ignore-lru', action='store_true', help='If LRU is not available, use a set for the cache (for testing purposes)')
 
     args = argparser.parse_args()
@@ -374,7 +374,7 @@ if __name__ == "__main__":
     methods[args.method](
         args.logfile_ref, 
         args.logfile_pred,
-        cache_size = args.size,
-        lookahead_size = args.lookahead,
+        cache_size = args.cache_size,
+        lookahead_size = args.lookahead_size,
         context_size = args.context_size
     )
