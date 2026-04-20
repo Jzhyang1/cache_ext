@@ -75,9 +75,7 @@ def generate_markov_model(logfile_ref, context_size):
     # Compile hist into a map {addr: [(PDF, next_addr)]}
     ret = {}
     for addr, entries in hist.items():
-        total = 0
-        for next_addr, count in entries.items():
-            total += count
+        total = sum(entries.values())
         accum, miniret = 0, []
         for next_addr, count in entries.items():
             accum += count
