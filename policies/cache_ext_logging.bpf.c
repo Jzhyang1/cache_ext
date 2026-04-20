@@ -90,8 +90,9 @@ void BPF_STRUCT_OPS(log_evict_folios, struct cache_ext_eviction_ctx *eviction_ct
 }
 
 void BPF_STRUCT_OPS(log_folio_accessed, struct folio *folio) {
-    if (!is_folio_relevant(folio))
+    if (!is_folio_relevant(folio)) {
         return;
+	}
 
 	// 0. Get data from EEVDF scheduler
 	struct cache_ext_pid_pair pid_pair = bpf_cache_ext_get_sched();
