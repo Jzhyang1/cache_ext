@@ -25,5 +25,8 @@ if __name__ == '__main__':
                 cur_run += 1
         tallies.append(cur_run)  # add the last run
 
+    # print median
+    print("median:", sorted(tallies)[len(tallies) // 2])
+
     from hist import plot
     plot(args.logfile, tallies, bins=args.bins)
