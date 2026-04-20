@@ -95,7 +95,8 @@ void BPF_STRUCT_OPS(log_folio_accessed, struct folio *folio) {
 	}
 
 	// 0. Get data from EEVDF scheduler
-	struct cache_ext_pid_pair pid_pair = bpf_cache_ext_get_sched();
+	struct cache_ext_pid_pair pid_pair;
+	bpf_cache_ext_get_sched(&pid_pair);
 	pid_t pid_self = pid_pair.pid1;
 	pid_t pid_next = pid_pair.pid2;
 
