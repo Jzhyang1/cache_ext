@@ -24,7 +24,7 @@ struct {
     __uint(type, BPF_MAP_TYPE_HASH);
     __type(key, __u64);
     __type(value, bool);
-    __uint(max_entries, 200000);
+    __uint(max_entries, 1000000);
 } inode_watchlist SEC(".maps");
 
 struct {
