@@ -14,10 +14,10 @@ from lru import LRU
 # Eviction is performed using LRU
 
 
-def build_markov_model(logfile_ref, context_size):
+def build_markov_model(logfile_ref, context_size, skip):
     # Build Markov model that includes the current and next PID in the state
     hist = {}
-    prev_state = [None] * context_size  # we will keep track of the last context_size states to use as the state for the Markov model
+    prev_state = [None] * (context_size + skip)  # we will keep track of the last context_size states to use as the state for the Markov model
     with LogFileRead(logfile_ref) as f:
         for access in f:
             if access.type != 0:
@@ -26,8 +26,8 @@ def build_markov_model(logfile_ref, context_size):
             minihist = hist.setdefault(tuple(prev_state), {})
             minihist[access.page_index] = minihist.get(access.page_index, 0) + 1
             # new state is the page index, the current PID, and the next PID
-            state = (access.page_index)
-            prev_state = prev_state[1:] + [state]
+            partial_state = (access.page_index)
+            prev_state = prev_state[1:] + [partial_state]
     model = {}
     for state, next_pages in hist.items():
         total = sum(next_pages.values())
@@ -38,27 +38,28 @@ def build_markov_model(logfile_ref, context_size):
                 continue    # skip very unlikely transitions to save space
             accum += prob
             miniret.append((page, accum))
-        model[state] = miniret
+        model[state[:context_size]] = miniret
     return model
 
-def predict_markov_next_page(model, current_state, count):
+def predict_markov_next_page(model, current_state) -> int | None:
     # Given the current state, predict the next page index using the Markov model
     # returns a randomly sampled next page index
     if current_state not in model:
-        return []  # we have no data for this state
+        return None  # we have no data for this state
     next_pages = model[current_state]
-    ret = []
-    for _ in range(count):
-        r = random.random()
-        for page, accum_prob in next_pages:
-            if r < accum_prob:
-                ret.append(page)
-    return ret
+    r = random.random()
+    for page, accum_prob in next_pages:
+        if r < accum_prob:
+            return page
+    return predict_markov_next_page(model, current_state)  # in case of rounding errors
 
 
 def page_only_markov_model_log_files(logfile_ref, logfile_pred, cache_size, lookahead_size, context_size):
-    model = build_markov_model(logfile_ref, context_size)
-    print("model is size", len(model))
+    models = []
+    for skip in range(lookahead_size):
+        model = build_markov_model(logfile_ref, context_size, skip)
+        print("model of size", len(model))
+        models.append(model)
     
     hits, total = 0, 0
     with LogFileRead(logfile_pred) as f:
@@ -74,8 +75,11 @@ def page_only_markov_model_log_files(logfile_ref, logfile_pred, cache_size, look
             state = (addr)
 
             prev_state = prev_state[1:] + [state]
-            for pred_addr in predict_markov_next_page(model, tuple(prev_state), lookahead_size):
-                cache[pred_addr] = cache.get(pred_addr, 0) + 1
+            for skip in range(lookahead_size):
+                model = models[skip]
+                pred_addr = predict_markov_next_page(model, tuple(prev_state[skip:]))
+                if pred_addr is not None:
+                    cache[pred_addr] = cache.get(pred_addr, 0) + 1
             total += 1
 
     print_hit_miss(hits, total)
