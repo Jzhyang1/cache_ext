@@ -79,6 +79,7 @@ def sched_aware_markov_model_log_file(logfile_ref, logfile_pred, cache_size, loo
             total += 1
 
     print_hit_miss(hits, total)
+    return hits, total
 
 if __name__ == '__main__':
     parser = ArgumentParser(description='Evaluate a Markov model predictor on a log file')

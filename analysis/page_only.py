@@ -83,6 +83,7 @@ def page_only_markov_model_log_files(logfile_ref, logfile_pred, cache_size, look
             total += 1
 
     print_hit_miss(hits, total)
+    return hits, total
 
 if __name__ == "__main__":
     parser = ArgumentParser(description='Evaluate a Markov model predictor on a log file')
