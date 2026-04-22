@@ -23,8 +23,8 @@ def lru_only_log_files(logfile_pred, cache_size, readahead_size, max_steps):
                 continue
             if (steps := steps + 1) > max_steps:
                 break
-            
-            addr = access.page_index
+
+            addr = access.address_space * 10000 + access.page_index
             if addr in cache:
                 hits += 1
             else:
