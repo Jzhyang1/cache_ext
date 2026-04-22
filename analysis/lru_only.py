@@ -13,13 +13,17 @@ from lru import LRU
 # perform with knowledge of the future page accesses on a different log logfile_pred.
 # Eviction is performed using LRU
 
-def lru_only_log_files(logfile_pred, cache_size, readahead_size):
+def lru_only_log_files(logfile_pred, cache_size, readahead_size, max_steps):
     page_ins, hits, total = 0, 0, 0
     with LogFileRead(logfile_pred) as f:
         cache = LRU(cache_size)
+        steps = 0
         for access in f:
             if access.type != 0:
                 continue
+            if (steps := steps + 1) > max_steps:
+                break
+            
             addr = access.page_index
             if addr in cache:
                 hits += 1
@@ -44,6 +48,7 @@ if __name__ == "__main__":
     parser.add_argument('logfile_pred', help='log file to evaluate the Markov model on')
     parser.add_argument('--cache-size', '-c', type=int, default=3, help='size of the cache to simulate')
     parser.add_argument('--readahead-size', '-l', type=int, default=0, help='number of consecutive-pages to prefetch on an access')
+    parser.add_argument('--max-steps', type=int, default=1000000000, help='maximum number of steps to process')
     args = parser.parse_args()
 
-    lru_only_log_files(args.logfile_pred, args.cache_size, args.readahead_size)
+    lru_only_log_files(args.logfile_pred, args.cache_size, args.readahead_size, args.max_steps)
