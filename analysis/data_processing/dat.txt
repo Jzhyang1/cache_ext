@@ -1,0 +1,40 @@
+Page-only model:
+  Cache size 1: 61.92%
+  Cache size 2: 62.04%
+  Cache size 3: 73.39%
+  Cache size 4: 78.74%
+  Cache size 8: 82.37%
+  Cache size 12: 82.60%
+  Cache size 16: 82.72%
+  Cache size 20: 82.81%
+  Cache size 24: 82.91%
+  Cache size 28: 83.01%
+  Cache size 32: 83.11%
+  Cache size 36: 83.22%
+  Cache size 40: 83.34%
+  Cache size 44: 83.46%
+  Cache size 48: 83.60%
+  Cache size 52: 83.74%
+  Cache size 56: 83.87%
+  Cache size 60: 83.99%
+
+Sched-aware model:
+  Cache size 1: 68.60%
+  Cache size 2: 68.71%
+  Cache size 3: 75.70%
+  Cache size 4: 79.69%
+  Cache size 8: 82.39%
+  Cache size 12: 82.57%
+  Cache size 16: 82.69%
+  Cache size 20: 82.79%
+  Cache size 24: 82.90%
+  Cache size 28: 83.00%
+  Cache size 32: 83.10%
+  Cache size 36: 83.21%
+  Cache size 40: 83.33%
+  Cache size 44: 83.46%
+  Cache size 48: 83.60%
+  Cache size 52: 83.72%
+  Cache size 56: 83.85%
+  Cache size 60: 83.97%
+  Cache size 64: 84.09%

@@ -35,6 +35,7 @@ def lru_only_log_files(logfile_pred, cache_size, readahead_size):
                 cache[addr + i] = count + 1
             total += 1
 
+    print(f"Page-ins: {page_ins}, this is {page_ins / total * 100:.2f}% of total accesses")
     print_hit_miss(hits, total)
 
 if __name__ == "__main__":

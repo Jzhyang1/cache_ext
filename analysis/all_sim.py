@@ -18,8 +18,8 @@ initial_cache_size = 4
 cache_size_increment = 4
 
 def all_sim(logfile_ref, logfile_pred, max_cache_size, lookahead_size, context_size):
-    hit_rate_page_only = [(0.0, initial_cache_size)]
-    hit_rate_sched_aware = [(0.0, initial_cache_size)]
+    hit_rate_page_only = [(0.0, 0)]
+    hit_rate_sched_aware = [(0.0, 0)]
 
     while hit_rate_page_only[-1][1] < max_cache_size and hit_rate_sched_aware[-1][1] < max_cache_size:
         if hit_rate_page_only[-1][0] <= hit_rate_sched_aware[-1][0]:
@@ -50,7 +50,7 @@ def all_sim(logfile_ref, logfile_pred, max_cache_size, lookahead_size, context_s
     plt.ylabel("Hit Rate")
     plt.title("Performance Comparison")
     plt.legend()
-    plt.show()
+    plt.savefig("performance_comparison.png")
 
     return hit_rate_page_only, hit_rate_sched_aware
 
