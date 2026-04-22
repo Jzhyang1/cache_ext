@@ -68,7 +68,7 @@ def generate_markov_model(logfile_ref, context_size):
         for access in f:
             if access.type != 0:
                 continue
-            addr = access.page_index
+            addr = access.get_idx()
             minihist = hist.setdefault(tuple(prev_addrs), {})
             minihist[addr] = minihist.get(addr, 0) + 1
             prev_addrs = prev_addrs[1:] + [addr]
@@ -105,7 +105,7 @@ def markov_model_log_files(logfile_ref, logfile_pred, cache_size, lookahead_size
         for access in f:
             if access.type != 0:
                 continue
-            addr = access.page_index
+            addr = access.get_idx()
             if addr in cache:
                 hits += 1
 
@@ -162,7 +162,7 @@ def sched_aware_markov_model_log_files(logfile_ref, logfile_pred, cache_size, lo
                 if access.type == 1:
                     # page_index is dst pid for type == 1
                     active_pids.discard(access.address_space)
-                    active_pids.add(access.page_index)
+                    active_pids.add(access.get_idx())
                 elif access.type == 0:
                     for pid in active_pids:
                         pid_activities[pid] = pid_activities.get(pid, 0) + 1
@@ -191,13 +191,13 @@ def sched_aware_markov_model_log_files(logfile_ref, logfile_pred, cache_size, lo
                 if access.type == 1:
                     # page_index is dst pid for type == 1
                     active_pids.discard(access.address_space)
-                    active_pids.add(access.page_index)
+                    active_pids.add(access.get_idx())
                 elif access.type == 0:
                     for pid in active_pids:
                         if pid in pid_writes:
                             pid_writes[pid](
                                 access.nr_event, access.type, access.drop_count, 
-                                access.address_space, access.page_index, access.pid_self, access.pid_next
+                                access.address_space, access.get_idx(), access.pid_self, access.pid_next
                             )
     for pid, cache_file in pid_caches.items():
         cache_file.__exit__(None, None, None)
@@ -214,7 +214,7 @@ def readahead_log_files(logfile_ref, logfile_pred, cache_size, lookahead_size, *
         total = 0
         with LogFileRead(logfile) as f:
             for access in f:
-                addr = access.page_index
+                addr = access.get_idx()
                 if addr in cache:
                     hits += 1
                 else:
@@ -241,13 +241,13 @@ def matching_log_files(logfile_ref, logfile_pred, cache_size, lookahead_size, co
             model_iter = iter(model)
             for _ in range(lookahead_size + i):
                 try:
-                    ref_addr = next(model_iter).page_index
+                    ref_addr = next(model_iter).get_idx()
                     if ref_addr is not None:
                         lookahead[ref_addr] = None
                 except StopIteration:
                     pass
             for access in f:
-                addr = access.page_index
+                addr = access.get_idx()
                 if addr in cache or addr in lookahead:
                     hits += 1
                 else:
@@ -255,7 +255,7 @@ def matching_log_files(logfile_ref, logfile_pred, cache_size, lookahead_size, co
 
                 # Prefetch
                 try:
-                    ref_addr = next(model_iter).page_index
+                    ref_addr = next(model_iter).get_idx()
                     if ref_addr is not None:
                         lookahead[ref_addr] = None
                 except StopIteration:
@@ -271,8 +271,8 @@ def compare_log_files(logfile_ref, logfile_pred, **kwargs):
     seq1 = []
     seq2 = []
     with LogFileRead(logfile_ref) as f1, LogFileRead(logfile_pred) as f2:
-        seq1 = [access.page_index for access in f1]
-        seq2 = [access.page_index for access in f2]
+        seq1 = [access.get_idx() for access in f1]
+        seq2 = [access.get_idx() for access in f2]
     distance = DamerauLevenshtein.distance(seq1, seq2)
     longer_length = max(len(seq1), len(seq2))
     print_hit_miss(longer_length - distance, longer_length)
@@ -300,11 +300,13 @@ class LogEntry:
         self.type = type
         self.drop_count = drop_count
         self.address_space = address_space
-        self.page_index = page_index
-        self.sched_pid_prev = self.address_space
-        self.sched_pid_next = self.page_index
+        self._page_index = page_index
+        self.sched_pid_prev = address_space
+        self.sched_pid_next = page_index
         self.pid_self = pid_self
         self.pid_next = pid_next
+    def get_idx(self):
+        return self.address_space * 10000 + self._page_index
 class LogFileIterator:
     def __init__(self, file):
         self.file = file

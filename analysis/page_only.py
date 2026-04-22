@@ -24,9 +24,9 @@ def build_markov_model(logfile_ref, context_size, skip):
                 continue    # we only handle page-access events
             
             minihist = hist.setdefault(tuple(prev_state), {})
-            minihist[access.page_index] = minihist.get(access.page_index, 0) + 1
+            minihist[access.get_idx()] = minihist.get(access.get_idx(), 0) + 1
             # new state is the page index, the current PID, and the next PID
-            partial_state = (access.page_index)
+            partial_state = (access.get_idx())
             prev_state = prev_state[1:] + [partial_state]
     model = {}
     for state, next_pages in hist.items():
@@ -68,7 +68,7 @@ def page_only_markov_model_log_files(logfile_ref, logfile_pred, cache_size, look
         for access in f:
             if access.type != 0:
                 continue
-            addr = access.page_index
+            addr = access.get_idx()
             if addr in cache:
                 hits += 1
             cache[addr] = cache.get(addr, 0) + 1

@@ -24,7 +24,7 @@ def lru_only_log_files(logfile_pred, cache_size, readahead_size, max_steps):
             if (steps := steps + 1) > max_steps:
                 break
 
-            addr = access.address_space * 10000 + access.page_index
+            addr = access.get_idx()
             if addr in cache:
                 hits += 1
             else:
