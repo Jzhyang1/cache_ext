@@ -44,8 +44,8 @@ def all_sim(logfile_ref, logfile_pred, max_cache_size, lookahead_size, context_s
 
     # save a graph
     from matplotlib import pyplot as plt
-    plt.plot([cache_size for hit_rate, cache_size in hit_rate_page_only], [hit_rate for hit_rate, cache_size in hit_rate_page_only], label="Page-only model")
-    plt.plot([cache_size for hit_rate, cache_size in hit_rate_sched_aware], [hit_rate for hit_rate, cache_size in hit_rate_sched_aware], label="Sched-aware model")
+    plt.plot([cache_size for _, cache_size in hit_rate_page_only], [hit_rate for hit_rate, _ in hit_rate_page_only], label="Page-only model")
+    plt.plot([cache_size for _, cache_size in hit_rate_sched_aware], [hit_rate for hit_rate, _ in hit_rate_sched_aware], label="Sched-aware model")
     plt.xlabel("Cache Size")
     plt.ylabel("Hit Rate")
     plt.title("Performance Comparison")

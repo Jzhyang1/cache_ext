@@ -13,8 +13,8 @@ from lru import LRU
 # perform with knowledge of the future page accesses on a different log logfile_pred.
 # Eviction is performed using LRU
 
-def lru_only_log_files(logfile_pred, cache_size):
-    hits, total = 0, 0
+def lru_only_log_files(logfile_pred, cache_size, readahead_size):
+    page_ins, hits, total = 0, 0, 0
     with LogFileRead(logfile_pred) as f:
         cache = LRU(cache_size)
         for access in f:
@@ -23,7 +23,16 @@ def lru_only_log_files(logfile_pred, cache_size):
             addr = access.page_index
             if addr in cache:
                 hits += 1
-            cache[addr] = cache.get(addr, 0) + 1
+            else:
+                page_ins += 1
+            
+            for i in range(readahead_size + 1):
+                count = cache.get(addr + i, 0)
+                if count == 0:
+                    # not in cache, page it in
+                    page_ins += 1
+                # make the accessed pages more recently used
+                cache[addr + i] = count + 1
             total += 1
 
     print_hit_miss(hits, total)
@@ -32,7 +41,8 @@ if __name__ == "__main__":
     parser = ArgumentParser(description='Evaluate a Markov model predictor on a log file')
     parser.add_argument('logfile_ref', help='log file to build the Markov model from')
     parser.add_argument('logfile_pred', help='log file to evaluate the Markov model on')
-    parser.add_argument('--cache-size', '-c', type=int, default=3, help='size of the cache to simulate (0 for unlimited)')
+    parser.add_argument('--cache-size', '-c', type=int, default=3, help='size of the cache to simulate')
+    parser.add_argument('--readahead-size', '-l', type=int, default=0, help='number of consecutive-pages to prefetch on an access')
     args = parser.parse_args()
 
-    lru_only_log_files(args.logfile_pred, args.cache_size)
+    lru_only_log_files(args.logfile_pred, args.cache_size, args.readahead_size)
