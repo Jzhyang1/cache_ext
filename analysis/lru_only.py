@@ -27,8 +27,6 @@ def lru_only_log_files(logfile_pred, cache_size, readahead_size, max_steps):
             addr = access.get_idx()
             if addr in cache:
                 hits += 1
-            else:
-                page_ins += 1
             
             for i in range(readahead_size + 1):
                 count = cache.get(addr + i, 0)
