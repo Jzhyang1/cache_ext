@@ -18,14 +18,17 @@ def hash_state(list_of_substates):
         h = (h * 1777 + substate) % 177777
     return h
 
-def build_markov_model(logfile_ref, context_size, skip):
+def build_markov_model(logfile_ref, context_size, skip, max_steps):
     # Build Markov model that includes the current and next PID in the state
     hist = {}
     prev_state = [None] * (context_size + skip)  # we will keep track of the last context_size states to use as the state for the Markov model
     with LogFileRead(logfile_ref) as f:
+        steps = 0
         for access in f:
             if access.type != 0:
                 continue    # we only handle page-access events
+            if (steps := steps + 1) > max_steps:
+                break
             
             minihist = hist.setdefault(hash_state(prev_state[:context_size]), {})
             minihist[access.get_idx()] = minihist.get(access.get_idx(), 0) + 1
@@ -62,10 +65,10 @@ def predict_markov_next_page(model, current_state) -> int | None:
         r = random.random()
 
 
-def sched_aware_markov_model_log_file(logfile_ref, logfile_pred, cache_size, lookahead_size, context_size):
+def sched_aware_markov_model_log_file(logfile_ref, logfile_pred, cache_size, lookahead_size, context_size, max_steps):
     models = []
     for skip in range(lookahead_size):
-        model = build_markov_model(logfile_ref, context_size, skip)
+        model = build_markov_model(logfile_ref, context_size, skip, max_steps)
         print("model of size", len(model))
         models.append(model)
 
@@ -73,9 +76,13 @@ def sched_aware_markov_model_log_file(logfile_ref, logfile_pred, cache_size, loo
     with LogFileRead(logfile_pred) as f:
         prev_state = [None] * context_size
         cache = LRU(cache_size)
+        steps = 0
         for access in f:
             if access.type != 0:
                 continue
+            if (steps := steps + 1) > max_steps:
+                break
+
             addr = access.get_idx()
             if addr in cache:
                 hits += 1
@@ -100,6 +107,7 @@ if __name__ == '__main__':
     parser.add_argument('--cache-size', '-c', type=int, default=3, help='size of the cache to simulate (0 for unlimited)')
     parser.add_argument('--lookahead-size', '-l', type=int, default=1, help='number of future accesses to predict and include in the cache')
     parser.add_argument('--context-size', '-t', type=int, default=3, help='number of past accesses to include in the state for the Markov model')
+    parser.add_argument('--max-steps', '-s', type=int, default=600000, help='maximum number of steps to process')
     args = parser.parse_args()
 
-    sched_aware_markov_model_log_file(args.logfile_ref, args.logfile_pred, args.cache_size, args.lookahead_size, args.context_size)
+    sched_aware_markov_model_log_file(args.logfile_ref, args.logfile_pred, args.cache_size, args.lookahead_size, args.context_size, args.max_steps)
