@@ -31,7 +31,7 @@ def build_markov_model(logfile_ref, context_size, skip):
             if access.type != 0:
                 continue    # we only handle page-access events
             
-            minihist = hist.setdefault(hash_state(prev_state), {})
+            minihist = hist.setdefault(hash_state(prev_state[:context_size]), {})
             minihist[access.get_idx()] = minihist.get(access.get_idx(), 0) + 1
             # new state is the page index, the current PID, and the next PID
             partial_state = (access.get_idx() % 1777)
@@ -46,7 +46,7 @@ def build_markov_model(logfile_ref, context_size, skip):
                 continue    # skip very unlikely transitions to save space
             miniret.append((page, prob))
         miniret.sort(key=lambda x: x[1], reverse=True)
-        model[state[:context_size]] = miniret[:3]  # only keep the top 3 most likely next pages to save space
+        model[state] = miniret[:3]  # only keep the top 3 most likely next pages to save space
     return model
 
 def predict_markov_next_page(model, current_state) -> int | None:
