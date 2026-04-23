@@ -9,6 +9,14 @@ sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 from compare import LogFileRead, print_hit_miss
 from lru import LRU
 
+def hash_state(list_of_substates):
+    # hash a list of substates into a single integer to save space in the Markov model
+    h = 0
+    for substate in list_of_substates:
+        if substate is None:
+            substate = 0
+        h = (h * 1777 + substate) % 17777
+    return h
 
 def build_markov_model(logfile_ref, context_size, skip):
     # Build Markov model that includes the current and next PID in the state
@@ -19,7 +27,7 @@ def build_markov_model(logfile_ref, context_size, skip):
             if access.type != 0:
                 continue    # we only handle page-access events
             
-            minihist = hist.setdefault(tuple(prev_state), {})
+            minihist = hist.setdefault(hash_state(prev_state), {})
             minihist[access.get_idx()] = minihist.get(access.get_idx(), 0) + 1
             # new state is the page index, the current PID, and the next PID
             # do some hashing to save space
@@ -41,6 +49,7 @@ def build_markov_model(logfile_ref, context_size, skip):
 def predict_markov_next_page(model, current_state) -> int | None:
     # Given the current state, predict the next page index using the Markov model
     # returns a randomly sampled next page index
+    current_state = hash_state(current_state)
     if current_state not in model:
         return None  # we have no data for this state
     next_pages = model[current_state]
@@ -75,7 +84,7 @@ def sched_aware_markov_model_log_file(logfile_ref, logfile_pred, cache_size, loo
             prev_state = prev_state[1:] + [state]
             for skip in range(lookahead_size):
                 model = models[skip]
-                pred_addr = predict_markov_next_page(model, tuple(prev_state[skip:]))
+                pred_addr = predict_markov_next_page(model, prev_state[skip:])
                 if pred_addr is not None:
                     cache[pred_addr] = cache.get(pred_addr, 0) + 1
             total += 1
