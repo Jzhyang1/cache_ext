@@ -42,8 +42,6 @@ def build_markov_model(logfile_ref, context_size, skip, max_steps):
         miniret = []
         for page, count in next_pages.items():
             prob = count / total
-            if prob < 0.05:
-                continue    # skip very unlikely transitions to save space
             miniret.append((page, prob))
         miniret.sort(key=lambda x: x[1], reverse=True)
         model[state] = miniret[:3]  # only keep the top 3 most likely next pages to save space
@@ -62,7 +60,6 @@ def predict_markov_next_page(model, current_state) -> int | None:
             if r < prob:
                 return page
             r -= prob
-        r = random.random()
 
 
 def sched_aware_markov_model_log_file(logfile_ref, logfile_pred, cache_size, lookahead_size, context_size, max_steps):
