@@ -14,6 +14,7 @@ from lru import LRU
 # Eviction is performed using LRU
 
 def hash_state(list_of_substates):
+    return tuple(list_of_substates)
     # hash a list of substates into a single integer to save space in the Markov model
     h = 0
     for substate in list_of_substates:
