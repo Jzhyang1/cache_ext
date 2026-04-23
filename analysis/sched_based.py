@@ -28,14 +28,14 @@ def build_markov_model(logfile_ref, context_size, skip):
     model = {}
     for state, next_pages in hist.items():
         total = sum(next_pages.values())
-        accum, miniret = 0, []
+        miniret = []
         for page, count in next_pages.items():
             prob = count / total
             if prob < 0.05:
                 continue    # skip very unlikely transitions to save space
-            accum += prob
-            miniret.append((page, accum))
-        model[state[:context_size]] = miniret
+            miniret.append((page, prob))
+        miniret.sort(key=lambda x: x[1], reverse=True)
+        model[state[:context_size]] = miniret[:3]  # only keep the top 3 most likely next pages to save space
     return model
 
 def predict_markov_next_page(model, current_state) -> int | None:
@@ -45,9 +45,10 @@ def predict_markov_next_page(model, current_state) -> int | None:
         return None  # we have no data for this state
     next_pages = model[current_state]
     r = random.random()
-    for page, accum_prob in next_pages:
-        if r < accum_prob:
+    for page, prob in next_pages:
+        if r < prob:
             return page
+        r -= prob
     return predict_markov_next_page(model, current_state)  # in case of rounding errors
 
 
@@ -69,7 +70,7 @@ def sched_aware_markov_model_log_file(logfile_ref, logfile_pred, cache_size, loo
             if addr in cache:
                 hits += 1
             cache[addr] = cache.get(addr, 0) + 1
-            state = (addr, access.pid_self, access.pid_next)
+            state = addr % 1777 + (access.pid_self ^ access.pid_next)
 
             prev_state = prev_state[1:] + [state]
             for skip in range(lookahead_size):
