@@ -57,11 +57,12 @@ def predict_markov_next_page(model, current_state) -> int | None:
         return None  # we have no data for this state
     next_pages = model[current_state]
     r = random.random()
-    for page, prob in next_pages:
-        if r < prob:
-            return page
-        r -= prob
-    return predict_markov_next_page(model, current_state)  # in case of rounding errors
+    while True:
+        for page, prob in next_pages:
+            if r < prob:
+                return page
+            r -= prob
+        r = random.random()
 
 
 def page_only_markov_model_log_files(logfile_ref, logfile_pred, cache_size, lookahead_size, context_size):
