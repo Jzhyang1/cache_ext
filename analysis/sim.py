@@ -134,8 +134,8 @@ def run_simulation(logfile_path, prefetcher: Prefetcher, cache_size, max_steps):
 if __name__ == "__main__":
     parser = ArgumentParser(description='Evaluate a prefetching policy on a log file')
     parser.add_argument('logfile_pred', help='log file to evaluate')
-    parser.add_argument('--cache-size', '-c', type=int, default=3)
-    parser.add_argument('--readahead-size', '-l', type=int, default=0)
+    parser.add_argument('--cache-size', '-c', type=int, default=10)
+    parser.add_argument('--readahead-size', '-l', type=int, default=2)
     parser.add_argument('--max-steps', type=int, default=1000000000)
     args = parser.parse_args()
 

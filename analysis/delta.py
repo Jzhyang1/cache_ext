@@ -57,9 +57,9 @@ class DeltaChainPrefetcher(Prefetcher):
 if __name__ == "__main__":
     parser = ArgumentParser(description='Evaluate a prefetching policy on a log file')
     parser.add_argument('logfile_pred', help='log file to evaluate')
-    parser.add_argument('--cache-size', '-c', type=int, default=3)
-    parser.add_argument('--readahead-size', '-l', type=int, default=0)
-    parser.add_argument('--context-size', '-s', type=int, default=3)
+    parser.add_argument('--cache-size', '-c', type=int, default=10)
+    parser.add_argument('--readahead-size', '-l', type=int, default=2)
+    parser.add_argument('--context-size', '-s', type=int, default=16)
     parser.add_argument('--max-steps', '-m', type=int, default=1000000000)
     parser.add_argument('--differentiate-pids', '-d', action='store_true', help='Keep separate histories per PID')
     parser.add_argument('--friendly-eager', '-f', action='store_true', help='Prefetch the next page for the next PID scheduled')
