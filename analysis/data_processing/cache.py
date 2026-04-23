@@ -22,11 +22,11 @@ def cache_log_file(logfile, pid_admit_set: set[int]):
             if access.type == 1:
                 if access.address_space in pid_admit_set:
                     active_count = max(0, active_count - 1)
-                if access.page_index in pid_admit_set:
+                if access.sched_pid_prev in pid_admit_set:
                     active_count += 1
             elif access.type == 0:
                 if active_count > 0:
-                    g(access.nr_event, access.type, access.drop_count, access.address_space, access.page_index, access.pid_self, access.pid_next)
+                    g(access.nr_event, access.type, access.drop_count, access.address_space, access._page_index, access.pid_self, access.pid_next)
     return logfile_cache
 
 def first_last_instance_of_pid(logfile, pids: set[int]):
@@ -35,10 +35,10 @@ def first_last_instance_of_pid(logfile, pids: set[int]):
         firsts: dict[int, int | None] = {pid: None for pid in pids}
         lasts: dict[int, int | None] = {pid: None for pid in pids}
         for access in f:
-            if access.page_index in pids:
-                if firsts[access.page_index] is None:
-                    firsts[access.page_index] = access.nr_event
-                lasts[access.page_index] = access.nr_event
+            if access.sched_pid_prev in pids:
+                if firsts[access.sched_pid_prev] is None:
+                    firsts[access.sched_pid_prev] = access.nr_event
+                lasts[access.sched_pid_prev] = access.nr_event
         return firsts, lasts
 
 def print_head(logfile, counts: set[int]):
@@ -49,7 +49,7 @@ def print_head(logfile, counts: set[int]):
         for i, access in enumerate(f):
             if i >= count:
                 break
-            print("addr:", access.address_space, "page_index:", access.page_index)
+            print("addr:", access.address_space, "page_index:", access._page_index)
 
 ops = {
     'cache': cache_log_file,

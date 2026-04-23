@@ -41,5 +41,5 @@ if __name__ == '__main__':
         data = []
         with LogFileRead(page_accesses) as f:
             for line in f:
-                data.append(line.page_index)
+                data.append(line._page_index)
         plot(page_accesses, data)
