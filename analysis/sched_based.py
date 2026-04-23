@@ -22,7 +22,8 @@ def build_markov_model(logfile_ref, context_size, skip):
             minihist = hist.setdefault(tuple(prev_state), {})
             minihist[access.get_idx()] = minihist.get(access.get_idx(), 0) + 1
             # new state is the page index, the current PID, and the next PID
-            partial_state = (access.get_idx(), access.pid_self, access.pid_next)
+            # do some hashing to save space
+            partial_state = access.get_idx() % 1777 + (access.pid_self ^ access.pid_next)
             prev_state = prev_state[1:] + [partial_state]
     model = {}
     for state, next_pages in hist.items():
@@ -30,7 +31,7 @@ def build_markov_model(logfile_ref, context_size, skip):
         accum, miniret = 0, []
         for page, count in next_pages.items():
             prob = count / total
-            if prob < 0.02:
+            if prob < 0.05:
                 continue    # skip very unlikely transitions to save space
             accum += prob
             miniret.append((page, accum))

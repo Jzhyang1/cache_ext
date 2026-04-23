@@ -24,11 +24,11 @@ def read_data(file_path):
 
 def plot_data(page_only, sched_based):
     plt.figure(figsize=(10, 6))
-    plt.plot([x[0] for x in page_only], [x[1] for x in page_only], marker='o', label='Page Only')
-    plt.plot([x[0] for x in sched_based], [x[1] for x in sched_based], marker='o', label='Sched Based')
+    plt.plot([x[0] for x in page_only], [100-x[1] for x in page_only], marker='o', label='Page Only')
+    plt.plot([x[0] for x in sched_based], [100-x[1] for x in sched_based], marker='o', label='Sched Based')
     plt.xlabel('Cache Size (MB)')
-    plt.ylabel('Percentage (%)')
-    plt.title('Cache Size vs Percentage')
+    plt.ylabel('Miss Rate (%)')
+    plt.title('Cache Size vs Miss Rate')
     plt.legend()
     plt.grid()
     plt.show()

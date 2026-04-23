@@ -34,7 +34,7 @@ def build_markov_model(logfile_ref, context_size, skip):
         accum, miniret = 0, []
         for page, count in next_pages.items():
             prob = count / total
-            if prob < 0.02:
+            if prob < 0.05:
                 continue    # skip very unlikely transitions to save space
             accum += prob
             miniret.append((page, accum))
@@ -72,7 +72,7 @@ def page_only_markov_model_log_files(logfile_ref, logfile_pred, cache_size, look
             if addr in cache:
                 hits += 1
             cache[addr] = cache.get(addr, 0) + 1
-            state = (addr)
+            state = (addr % 1777)
 
             prev_state = prev_state[1:] + [state]
             for skip in range(lookahead_size):
