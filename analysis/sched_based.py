@@ -15,7 +15,7 @@ def hash_state(list_of_substates):
     for substate in list_of_substates:
         if substate is None:
             substate = 0
-        h = (h * 1777 + substate) % 17777
+        h = (h * 1777 + substate) % 177777
     return h
 
 def build_markov_model(logfile_ref, context_size, skip):
